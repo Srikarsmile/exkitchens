@@ -69,7 +69,7 @@ export default function SplitText({
   return (
     <MotionTag
       ref={ref as React.RefObject<HTMLSpanElement>}
-      className={`inline-flex flex-wrap overflow-hidden ${className}`}
+      className={`inline-flex flex-wrap ${className}`}
       variants={containerVariants}
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
@@ -77,18 +77,22 @@ export default function SplitText({
     >
       {chars.map((char, i) =>
         char === " " ? (
-          // Preserve word spacing without wrapping in animation div
           <span key={i} aria-hidden="true" style={{ display: "inline-block", width: "0.3em" }} />
         ) : (
-          <motion.span
+          // Outer span clips the y-entrance only for this character
+          <span
             key={i}
-            custom={i}
-            variants={charVariants}
             aria-hidden="true"
-            style={{ display: "inline-block", willChange: "transform, opacity" }}
+            style={{ display: "inline-block", overflow: "hidden", padding: "0.1em 0.02em" }}
           >
-            {char}
-          </motion.span>
+            <motion.span
+              custom={i}
+              variants={charVariants}
+              style={{ display: "inline-block", willChange: "transform, opacity, filter" }}
+            >
+              {char}
+            </motion.span>
+          </span>
         )
       )}
     </MotionTag>

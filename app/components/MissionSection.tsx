@@ -70,7 +70,7 @@ export default function MissionSection({ splineUrl }: MissionSectionProps) {
               duration={0.75}
             />
             <SplitText
-              text="Conscience."
+              text="Conscience"
               className="block font-serif italic text-[#3d7a44]"
               charDelay={0.04}
               duration={0.8}
