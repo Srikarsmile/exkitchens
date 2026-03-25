@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.exkitchens.com"),
   title: "ExKitchens | Premium Ex-Display Kitchens Up to 70% Off",
   description:
-    "The UK\u2019s largest marketplace for premium ex-display and pre-loved kitchens. Browse 2,000+ luxury kitchens from Bulthaup, Poggenpohl, Siematic and more \u2014 up to 70% off retail.",
+    "The UK's largest marketplace for premium ex-display and pre-loved kitchens. Browse 2,000+ luxury kitchens from Bulthaup, Poggenpohl, Siematic and more. Up to 70% off retail.",
   keywords: [
     "ex-display kitchens",
     "luxury kitchens",
@@ -30,15 +30,15 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ExKitchens | Premium Ex-Display Kitchens Up to 70% Off",
     description:
-      "The UK\u2019s largest marketplace for premium ex-display and pre-loved kitchens. 2,000+ luxury kitchens from 100+ showrooms.",
+      "The UK's largest marketplace for premium ex-display and pre-loved kitchens. 2,000+ luxury kitchens from 100+ showrooms.",
     url: "https://www.exkitchens.com",
     siteName: "ExKitchens",
     images: [
       {
-        url: "/assets/kitchen_nano_ultrawide_1.png",
+        url: "/assets/og_leaf.png",
         width: 1200,
         height: 630,
-        alt: "ExKitchens - Premium Ex-Display Kitchens",
+        alt: "ExKitchens leaf logo",
       },
     ],
     locale: "en_GB",
@@ -48,8 +48,8 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ExKitchens | Premium Ex-Display Kitchens Up to 70% Off",
     description:
-      "The UK\u2019s largest marketplace for premium ex-display and pre-loved kitchens. Up to 70% off retail.",
-    images: ["/assets/kitchen_nano_ultrawide_1.png"],
+      "The UK's largest marketplace for premium ex-display and pre-loved kitchens. Up to 70% off retail.",
+    images: ["/assets/og_leaf.png"],
   },
   robots: {
     index: true,
