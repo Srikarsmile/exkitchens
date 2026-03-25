@@ -62,7 +62,7 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
         className="absolute inset-0 z-0"
       />
 
-      {/* Hero Content — bottom-aligned for editorial feel */}
+      {/* Hero Content - bottom-aligned for editorial feel */}
       <motion.div
         style={{ y: textY, opacity: textOpacity }}
         className="relative z-10 px-8 md:px-16 lg:px-24 pb-24 md:pb-32 max-w-5xl"
@@ -98,7 +98,7 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
         >
           2,000+ premium ex-display kitchens from 100+ showrooms.
           <br className="hidden md:block" />
-          Bulthaup, Poggenpohl, Siematic — up to 70% off retail.
+          Bulthaup, Poggenpohl, Siematic. Up to 70% off retail.
         </motion.p>
 
         <motion.div

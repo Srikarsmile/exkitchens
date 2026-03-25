@@ -74,7 +74,7 @@ export default function MissionSection({ splineUrl }: MissionSectionProps) {
             change this.
           </p>
           <p className="text-gray-500 text-lg leading-relaxed mb-10">
-            We connect homeowners with premium showrooms nationwide — keeping
+            We connect homeowners with premium showrooms nationwide, keeping
             quality materials out of landfill.
           </p>
 

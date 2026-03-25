@@ -12,7 +12,7 @@ import SellCTA from "./SellCTA";
 import Footer from "./Footer";
 import BackToTop from "./BackToTop";
 
-// Spline community scene URLs — swap with custom kitchen scenes from spline.design/community
+// Spline community scene URLs - swap with custom kitchen scenes from spline.design/community
 // Set to null to use beautiful image fallbacks (recommended until you have kitchen-themed 3D scenes)
 const SPLINE_SCENES = {
   hero: null as string | null,
