@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Star, Quote } from "lucide-react";
+import SplitText from "./SplitText";
+
 
 const mediaFeatures = [
   { name: "Grand Designs", size: "text-2xl md:text-3xl" },
@@ -77,10 +79,18 @@ export default function SocialProof() {
             Testimonials
           </span>
           <h2 className="text-4xl md:text-5xl font-light text-gray-900 tracking-tight">
-            Loved by{" "}
-            <span className="font-serif italic text-[#3d7a44]">
-              Homeowners
-            </span>
+            <SplitText
+              text="Loved by"
+              className="block"
+              charDelay={0.04}
+              duration={0.75}
+            />
+            <SplitText
+              text="Homeowners"
+              className="block font-serif italic text-[#3d7a44]"
+              charDelay={0.045}
+              duration={0.8}
+            />
           </h2>
         </motion.div>
 

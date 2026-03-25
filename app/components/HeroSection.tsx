@@ -9,6 +9,7 @@ import {
 import { ArrowRight, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import SplineScene from "./SplineScene";
+import SplitText from "./SplitText";
 
 interface HeroSectionProps {
   splineUrl?: string | null;
@@ -77,18 +78,24 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
           UK&apos;s Largest Ex-Display Marketplace
         </motion.div>
 
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight text-white leading-[1.05] mb-6"
-        >
-          A New Life for
-          <br />
-          <span className="font-serif italic text-[#5a9c64]">
-            Luxury Kitchens.
-          </span>
-        </motion.h1>
+        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight text-white leading-[1.05] mb-6">
+          <SplitText
+            text="A New Life for"
+            className="block"
+            charDelay={0.04}
+            duration={0.8}
+            yOffset={90}
+            bottomMargin={0}
+          />
+          <SplitText
+            text="Luxury Kitchens."
+            className="block font-serif italic text-[#5a9c64]"
+            charDelay={0.035}
+            duration={0.85}
+            yOffset={90}
+            bottomMargin={0}
+          />
+        </h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}

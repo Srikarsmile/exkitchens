@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Recycle, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import SplineScene from "./SplineScene";
+import SplitText from "./SplitText";
 
 interface MissionSectionProps {
   splineUrl?: string | null;
@@ -62,10 +63,18 @@ export default function MissionSection({ splineUrl }: MissionSectionProps) {
             Our Mission
           </span>
           <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 leading-[1.1]">
-            Design with a{" "}
-            <span className="font-serif italic text-[#3d7a44]">
-              Conscience.
-            </span>
+            <SplitText
+              text="Design with a"
+              className="block"
+              charDelay={0.03}
+              duration={0.75}
+            />
+            <SplitText
+              text="Conscience."
+              className="block font-serif italic text-[#3d7a44]"
+              charDelay={0.04}
+              duration={0.8}
+            />
           </h2>
           <p className="text-gray-500 text-lg leading-relaxed mb-4">
             Thousands of immaculate display kitchens are discarded yearly when

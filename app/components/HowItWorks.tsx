@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Tag, Hammer, Truck } from "lucide-react";
+import SplitText from "./SplitText";
 
 const steps = [
   {
@@ -42,8 +43,18 @@ export default function HowItWorks() {
             How It Works
           </span>
           <h2 className="text-4xl md:text-5xl font-light text-gray-900 tracking-tight">
-            From Showroom to{" "}
-            <span className="font-serif italic text-[#3d7a44]">Your Home</span>
+            <SplitText
+              text="From Showroom to"
+              className="block"
+              charDelay={0.03}
+              duration={0.75}
+            />
+            <SplitText
+              text="Your Home"
+              className="block font-serif italic text-[#3d7a44]"
+              charDelay={0.04}
+              duration={0.8}
+            />
           </h2>
         </motion.div>
 
