@@ -90,7 +90,12 @@ export default function SplitText({
           <span
             key={i}
             aria-hidden="true"
-            style={{ display: "inline-block", overflow: "hidden", padding: `${padV} ${padH}`, margin: `0 -${padH}` }}
+            style={{
+              display: "inline-block",
+              ...(italic ? { clipPath: "inset(0 -100%)" } : { overflow: "hidden" }),
+              padding: `${padV} ${padH}`,
+              margin: `0 -${padH}`,
+            }}
           >
             <motion.span
               custom={i}
