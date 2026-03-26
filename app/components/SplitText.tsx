@@ -92,7 +92,7 @@ export default function SplitText({
             aria-hidden="true"
             style={{
               display: "inline-block",
-              ...(italic ? { clipPath: "inset(0 -100%)" } : { overflow: "hidden" }),
+              overflow: italic ? "visible" : "hidden",
               padding: `${padV} ${padH}`,
               margin: `0 -${padH}`,
             }}
