@@ -100,7 +100,11 @@ export default function SplitText({
             <motion.span
               custom={i}
               variants={charVariants}
-              style={{ display: "inline-block", willChange: "transform, opacity, filter" }}
+              style={{
+                display: "inline-block",
+                willChange: "transform, opacity, filter",
+                ...(italic ? { padding: "0 0.2em", margin: "0 -0.2em" } : {}),
+              }}
             >
               {char}
             </motion.span>
