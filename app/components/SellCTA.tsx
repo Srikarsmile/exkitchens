@@ -18,6 +18,7 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
         src="/assets/kitchen_nano_landscape.png"
         alt="Sell your kitchen"
         fill
+        sizes="(max-width: 1024px) 100vw, 50vw"
         className="object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-br from-[#3d7a44]/30 via-transparent to-[#0f0f0f]/60" />
@@ -54,17 +55,14 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
             <div className="flex flex-wrap items-center gap-4 mb-10">
               <a
                 href="#sell"
-                onClick={(e) => { e.preventDefault(); setToast("Free valuation coming soon! Call 123 456 789"); setTimeout(() => setToast(null), 2000); }}
+                onClick={(e) => { e.preventDefault(); setToast("Free valuation coming soon! Call 123 456 789"); setTimeout(() => setToast(null), 3500); }}
                 className="px-8 py-4 rounded-full bg-white text-[#1a1a1a] font-medium tracking-wide hover:bg-[#5a9c64] hover:text-white transition-all flex items-center gap-3 group"
               >
                 Get a Free Valuation
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </a>
-              <a
-                href="tel:123456789"
-                className="flex items-center gap-3 text-white/40 hover:text-[#5a9c64] transition-colors group"
-              >
-                <div className="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center group-hover:border-[#5a9c64]/40 transition-colors">
+              <div className="flex items-center gap-3 text-white/40">
+                <div className="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center">
                   <Phone className="w-4 h-4" />
                 </div>
                 <div>
@@ -72,10 +70,10 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
                     Call Us
                   </span>
                   <span className="text-white/70 text-sm font-medium">
-                    123 456 789
+                    Coming Soon
                   </span>
                 </div>
-              </a>
+              </div>
             </div>
 
             <div className="flex items-center gap-5 text-white/25 text-xs tracking-wide">
@@ -103,7 +101,7 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full bg-[#1a1a1a] text-white text-sm font-medium shadow-xl border border-white/10">
+        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full bg-[#1a1a1a] text-white text-sm font-medium shadow-xl border border-white/10">
           {toast}
         </div>
       )}

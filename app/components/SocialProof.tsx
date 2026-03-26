@@ -90,6 +90,7 @@ export default function SocialProof() {
               className="block font-serif italic text-[#3d7a44]"
               charDelay={0.045}
               duration={0.8}
+              italic
             />
           </h2>
         </motion.div>

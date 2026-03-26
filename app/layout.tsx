@@ -73,6 +73,12 @@ export default function RootLayout({
       className={`${inter.variable} ${playfair.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#fafafa] text-[#111111] font-sans selection:bg-green-600/20 selection:text-green-900">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-[#3d7a44] focus:text-white focus:text-sm focus:font-medium"
+        >
+          Skip to main content
+        </a>
         {children}
       </body>
     </html>

@@ -78,7 +78,7 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
           UK&apos;s Largest Ex-Display Marketplace
         </motion.div>
 
-        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight text-white leading-[1.05] mb-6">
+        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight text-white leading-[1.15] mb-6">
           <SplitText
             text="A New Life for"
             className="block"
@@ -94,6 +94,7 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
             duration={0.85}
             yOffset={90}
             bottomMargin={0}
+            italic
           />
         </h1>
 

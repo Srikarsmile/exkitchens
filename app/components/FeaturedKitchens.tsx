@@ -72,24 +72,31 @@ type FilterType = "all" | "buy" | "auction";
 
 function TiltCard({ children }: { children: React.ReactNode }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (reducedMotion) return;
     const card = cardRef.current;
     if (!card) return;
-    const rect = card.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    card.style.transform = `perspective(1000px) rotateX(${y * -4}deg) rotateY(${x * 4}deg) scale3d(1.01, 1.01, 1.01)`;
+    const { clientX, clientY } = e;
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = card.getBoundingClientRect();
+      const x = (clientX - rect.left) / rect.width - 0.5;
+      const y = (clientY - rect.top) / rect.height - 0.5;
+      card.style.transform = `perspective(1000px) rotateX(${y * -4}deg) rotateY(${x * 4}deg) scale3d(1.01, 1.01, 1.01)`;
+    });
   };
 
   const handleMouseLeave = () => {
     if (reducedMotion) return;
+    cancelAnimationFrame(rafRef.current);
     const card = cardRef.current;
     if (card)
       card.style.transform =
@@ -115,7 +122,7 @@ export default function FeaturedKitchens() {
 
   const showToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2000);
+    setTimeout(() => setToast(null), 3500);
   };
 
   const filtered =
@@ -175,7 +182,7 @@ export default function FeaturedKitchens() {
               layout
             >
               <TiltCard>
-                <div className="group relative rounded-xl overflow-hidden bg-white border border-gray-100 hover:border-gray-200 transition-all cursor-pointer hover:shadow-xl duration-500">
+                <div className="group relative rounded-xl overflow-hidden bg-white border border-gray-100 hover:border-gray-200 active:border-[#3d7a44]/30 transition-all cursor-pointer hover:shadow-xl active:shadow-lg duration-500">
                   <div className="relative h-[240px] w-full overflow-hidden bg-gray-50">
                     {/* Badges */}
                     <div className="absolute top-3 left-3 z-10 flex gap-2">
@@ -246,7 +253,7 @@ export default function FeaturedKitchens() {
                       <button
                         onClick={() => showToast("Kitchen details coming soon!")}
                         aria-label={`View details for ${item.title}`}
-                        className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 group-hover:bg-[#3d7a44] group-hover:border-[#3d7a44] group-hover:text-white transition-all duration-300"
+                        className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 group-hover:bg-[#3d7a44] group-hover:border-[#3d7a44] group-hover:text-white active:bg-[#3d7a44] active:border-[#3d7a44] active:text-white transition-all duration-300"
                       >
                         <ArrowRight className="w-3.5 h-3.5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
                       </button>
@@ -275,7 +282,7 @@ export default function FeaturedKitchens() {
         </motion.div>
       </div>
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full bg-[#1a1a1a] text-white text-sm font-medium shadow-xl border border-white/10">
+        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full bg-[#1a1a1a] text-white text-sm font-medium shadow-xl border border-white/10">
           {toast}
         </div>
       )}

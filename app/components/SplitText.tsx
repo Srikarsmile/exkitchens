@@ -23,6 +23,8 @@ interface SplitTextProps {
   bottomMargin?: number;
   /** Only play once (like .inview with no re-trigger). Default: true */
   once?: boolean;
+  /** Use larger clipping padding for italic/serif fonts (e.g. Playfair Display). Default: false */
+  italic?: boolean;
 }
 
 const containerVariants: Variants = {
@@ -39,6 +41,7 @@ export default function SplitText({
   yOffset = 40,
   bottomMargin = -80,
   once = true,
+  italic = false,
 }: SplitTextProps) {
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref as React.RefObject<Element>, {
@@ -64,6 +67,10 @@ export default function SplitText({
     }),
   };
 
+  const padV = "0.15em";
+  const padH = italic ? "0.15em" : "0.05em";
+  const spaceWidth = italic ? "0.35em" : "0.3em";
+
   const MotionTag = motion[Tag as keyof typeof motion] as typeof motion.span;
 
   return (
@@ -77,13 +84,13 @@ export default function SplitText({
     >
       {chars.map((char, i) =>
         char === " " ? (
-          <span key={i} aria-hidden="true" style={{ display: "inline-block", width: "0.3em" }} />
+          <span key={i} aria-hidden="true" style={{ display: "inline-block", width: spaceWidth }} />
         ) : (
           // Outer span clips the y-entrance only for this character
           <span
             key={i}
             aria-hidden="true"
-            style={{ display: "inline-block", overflow: "hidden", padding: "0.1em 0.02em" }}
+            style={{ display: "inline-block", overflow: "hidden", padding: `${padV} ${padH}`, margin: `0 -${padH}` }}
           >
             <motion.span
               custom={i}

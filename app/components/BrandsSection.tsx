@@ -64,7 +64,7 @@ export default function BrandsSection() {
   return (
     <section
       id="brands"
-      className="w-full py-24 bg-[#111111] relative overflow-hidden"
+      className="w-full py-28 bg-[#111111] relative overflow-hidden"
     >
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#3d7a44]/40 to-transparent" />
 

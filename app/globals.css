@@ -16,8 +16,10 @@
   --foreground: #111111;
 }
 
-html {
-  scroll-behavior: smooth;
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {
@@ -98,6 +100,21 @@ html {
   animation-play-state: paused;
 }
 
+/* Particle tree canvas */
+.particle-tree-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  outline: none;
+}
+
+/* Focus-visible styles for keyboard navigation */
+:focus-visible {
+  outline: 2px solid #3d7a44;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* Selection highlight */
 ::selection {
   background-color: rgba(61, 122, 68, 0.2);
@@ -106,10 +123,6 @@ html {
 
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
   .marquee,
   .marquee-reverse {
     animation: none;

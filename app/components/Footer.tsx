@@ -10,6 +10,11 @@ const links = [
   { label: "Contact", href: "mailto:info@exkitchens.com" },
 ];
 
+const legalLinks = [
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+];
+
 export default function Footer() {
   return (
     <footer className="w-full bg-[#111111] text-white relative overflow-hidden">
@@ -27,7 +32,7 @@ export default function Footer() {
           />
 
           {/* Links */}
-          <nav className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
+          <nav aria-label="Footer navigation" className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
             {links.map((link) => (
               <a
                 key={link.label}
@@ -45,9 +50,21 @@ export default function Footer() {
           <p className="text-white/30 text-xs">
             &copy; {new Date().getFullYear()} ExKitchens. All rights reserved.
           </p>
-          <p className="text-white/20 text-xs">
-            London, UK &middot; info@exkitchens.com
-          </p>
+          <div className="flex items-center gap-4">
+            {legalLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="text-xs text-white/20 hover:text-[#5a9c64] transition-colors"
+              >
+                {link.label}
+              </a>
+            ))}
+            <span className="text-white/10">|</span>
+            <p className="text-white/20 text-xs">
+              London, UK &middot; info@exkitchens.com
+            </p>
+          </div>
         </div>
       </div>
     </footer>

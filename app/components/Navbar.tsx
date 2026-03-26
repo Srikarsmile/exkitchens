@@ -25,6 +25,7 @@ export default function Navbar() {
   return (
     <>
       <nav
+        aria-label="Main navigation"
         className={`fixed top-0 w-full z-50 flex items-center justify-between px-6 md:px-10 py-3.5 transition-all duration-500 ${
           scrolled
             ? "bg-white/95 backdrop-blur-xl border-b border-gray-200/60 shadow-sm"
@@ -37,6 +38,8 @@ export default function Navbar() {
             alt="ExKitchens"
             width={160}
             height={33}
+            loading="eager"
+            style={{ height: "auto" }}
             className={`object-contain transition-all duration-500 ${
               scrolled
                 ? ""

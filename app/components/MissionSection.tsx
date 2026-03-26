@@ -62,7 +62,7 @@ export default function MissionSection({ splineUrl }: MissionSectionProps) {
           <span className="text-[#3d7a44] font-semibold tracking-widest uppercase text-xs mb-5">
             Our Mission
           </span>
-          <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 leading-[1.1]">
+          <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 leading-[1.15]">
             <SplitText
               text="Design with a"
               className="block"
@@ -74,6 +74,7 @@ export default function MissionSection({ splineUrl }: MissionSectionProps) {
               className="block font-serif italic text-[#3d7a44]"
               charDelay={0.04}
               duration={0.8}
+              italic
             />
           </h2>
           <p className="text-gray-500 text-lg leading-relaxed mb-4">
