@@ -28,7 +28,7 @@ export default function Footer() {
             alt="ExKitchens"
             width={140}
             height={28}
-            className="object-contain"
+            className="object-contain brightness-0 invert"
           />
 
           {/* Links */}
