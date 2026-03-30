@@ -38,11 +38,10 @@ export default function Navbar() {
             <Image
               src="/assets/exkitchens_leaf_logo.png"
               alt="ExKitchens"
-              width={160}
-              height={36}
+              fill
+              sizes="160px"
               loading="eager"
-              style={{ width: "auto", height: "auto" }}
-              className={`object-contain absolute inset-0 transition-opacity duration-500 ${
+              className={`object-contain transition-opacity duration-500 ${
                 scrolled ? "opacity-100" : "opacity-0"
               }`}
             />
@@ -50,11 +49,10 @@ export default function Navbar() {
             <Image
               src="/assets/exkitchens_leaf_logo_white.png"
               alt="ExKitchens"
-              width={160}
-              height={36}
+              fill
+              sizes="160px"
               loading="eager"
-              style={{ width: "auto", height: "auto" }}
-              className={`object-contain absolute inset-0 transition-opacity duration-500 drop-shadow-sm ${
+              className={`object-contain transition-opacity duration-500 drop-shadow-sm ${
                 scrolled ? "opacity-0" : "opacity-100"
               }`}
             />
