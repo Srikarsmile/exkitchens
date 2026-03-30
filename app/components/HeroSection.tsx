@@ -41,20 +41,25 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
           alt="Luxury Ex-Display Kitchen"
           fill
           sizes="100vw"
-          className="object-cover object-right pointer-events-none"
+          className="object-cover object-center pointer-events-none"
           priority
         />
       </motion.div>
-      {/* Refined gradient: strong left fade into bg color for text readability */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0f0f0f] via-[#0f0f0f]/70 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f]/80 via-transparent to-[#0f0f0f]/30" />
+      {/* Subtle uniform darkening + radial vignette for cinematic depth */}
+      <div className="absolute inset-0 bg-black/50" />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 30%, rgba(15,15,15,0.7) 100%)",
+        }}
+      />
     </div>
   );
 
   return (
     <section
       ref={sectionRef}
-      className="relative w-full h-screen flex flex-col justify-end overflow-hidden bg-[#0f0f0f]"
+      className="relative w-full h-screen flex flex-col justify-center items-center overflow-hidden bg-[#0f0f0f]"
     >
       {/* Background */}
       <SplineScene
@@ -63,70 +68,66 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
         className="absolute inset-0 z-0"
       />
 
-      {/* Hero Content - bottom-aligned for editorial feel */}
+      {/* Hero Content */}
       <motion.div
         style={{ y: textY, opacity: textOpacity }}
-        className="relative z-10 px-8 md:px-16 lg:px-24 pb-24 md:pb-32 max-w-5xl"
+        className="relative z-10 px-8 flex flex-col items-center text-center"
       >
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/15 bg-white/5 backdrop-blur-sm text-white/80 text-xs font-semibold tracking-widest uppercase mb-8"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#5a9c64] animate-pulse" />
-          UK&apos;s Largest Ex-Display Marketplace
-        </motion.div>
-
-        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight text-white leading-[1.15] mb-6">
-          <SplitText
-            text="A New Life for"
-            className="block"
-            charDelay={0.04}
-            duration={0.8}
-            yOffset={90}
-            bottomMargin={0}
-          />
-          <SplitText
-            text="Luxury Kitchens."
-            className="block font-serif italic text-[#5a9c64]"
-            charDelay={0.035}
-            duration={0.85}
-            yOffset={90}
-            bottomMargin={0}
-            italic
-          />
+        <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-light tracking-tight text-white leading-[1.15] mb-8 text-center">
+          <span className="block">
+            <SplitText
+              text="A New Life for"
+              className="justify-center"
+              charDelay={0.04}
+              duration={0.8}
+              yOffset={90}
+              bottomMargin={0}
+            />
+          </span>
+          <span className="block">
+            <SplitText
+              text="Luxury Kitchens."
+              className="justify-center italic text-[#5a9c64] [font-family:var(--font-lora),ui-serif,Georgia,serif]"
+              charDelay={0.035}
+              duration={0.85}
+              yOffset={90}
+              bottomMargin={0}
+              italic
+            />
+          </span>
         </h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.7 }}
-          className="text-lg md:text-xl text-white/60 font-light mb-10 max-w-xl leading-relaxed"
+          className="text-base sm:text-lg md:text-xl font-light mb-10 max-w-xl leading-relaxed text-center bg-clip-text text-transparent bg-[length:200%_100%] bg-[linear-gradient(90deg,rgba(255,255,255,0.3)_0%,rgba(255,255,255,0.9)_50%,rgba(255,255,255,0.3)_100%)] animate-[shimmer_3s_ease-in-out_infinite]"
         >
-          2,000+ premium ex-display kitchens from 100+ showrooms.
+          Premium ex-display kitchens.
           <br className="hidden md:block" />
-          Bulthaup, Poggenpohl, Siematic. Up to 70% off retail.
+          Up to 70% off retail.
         </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.9 }}
-          className="flex flex-wrap items-center gap-4"
+          className="flex flex-wrap items-center justify-center gap-4"
         >
           <a
             href="#kitchens"
-            className="px-8 py-4 rounded-full bg-white text-[#1a1a1a] font-medium tracking-wide hover:bg-[#5a9c64] hover:text-white transition-all flex items-center gap-3 group shadow-xl"
+            className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 font-medium tracking-wide hover:bg-white hover:text-[#1a1a1a] transition-all duration-300 group"
           >
-            Browse Kitchens
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <span className="shimmer-text bg-clip-text text-transparent bg-[length:200%_100%] bg-[linear-gradient(90deg,rgba(255,255,255,0.5)_0%,rgba(255,255,255,1)_50%,rgba(255,255,255,0.5)_100%)] animate-[shimmer_3s_ease-in-out_infinite] group-hover:bg-none group-hover:text-[#1a1a1a]">
+              Explore
+            </span>
+            <ArrowRight className="w-4 h-4 text-white group-hover:text-[#1a1a1a] group-hover:translate-x-1 transition-all" />
           </a>
           <a
             href="#sell"
-            className="px-8 py-4 rounded-full border border-white/25 text-white font-medium tracking-wide hover:bg-white/10 transition-all"
+            className="px-10 py-4 rounded-full border border-white/15 text-white/70 font-medium tracking-wide hover:bg-white/10 hover:text-white transition-all duration-300"
           >
-            Sell Your Kitchen
+            Sell Yours
           </a>
         </motion.div>
       </motion.div>
@@ -135,14 +136,14 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1"
+        transition={{ delay: 2.5 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1"
       >
         <motion.div
           animate={{ y: [0, 6, 0] }}
           transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
         >
-          <ChevronDown className="w-5 h-5 text-white/30" />
+          <ChevronDown className="w-5 h-5 text-white/25" />
         </motion.div>
       </motion.div>
     </section>

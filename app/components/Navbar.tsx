@@ -6,10 +6,10 @@ import { Menu, X } from "lucide-react";
 import Image from "next/image";
 
 const navLinks = [
-  { label: "Buy", href: "#kitchens" },
-  { label: "Sell", href: "#sell" },
+  { label: "Kitchens", href: "#kitchens" },
   { label: "How It Works", href: "#how-it-works" },
-  { label: "About", href: "#mission" },
+  { label: "Our Story", href: "#mission" },
+  { label: "Sell Yours", href: "#sell" },
 ];
 
 export default function Navbar() {
@@ -17,7 +17,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60);
+    const onScroll = () => setScrolled(window.scrollY > 100);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -28,24 +28,37 @@ export default function Navbar() {
         aria-label="Main navigation"
         className={`fixed top-0 w-full z-50 flex items-center justify-between px-6 md:px-10 py-3.5 transition-all duration-500 ${
           scrolled
-            ? "bg-white/95 backdrop-blur-xl border-b border-gray-200/60 shadow-sm"
+            ? "bg-white/90 backdrop-blur-2xl border-b border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
             : "bg-transparent"
         }`}
       >
         <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0 }); }} aria-label="ExKitchens - Back to top" className="flex items-center">
-          <Image
-            src="/assets/exkitchens_leaf_logo.png"
-            alt="ExKitchens"
-            width={160}
-            height={33}
-            loading="eager"
-            style={{ height: "auto" }}
-            className={`object-contain transition-all duration-500 ${
-              scrolled
-                ? ""
-                : "brightness-0 invert drop-shadow-sm"
-            }`}
-          />
+          <span className="relative block" style={{ width: 160, height: 36 }}>
+            {/* Dark logo — visible when scrolled (white navbar) */}
+            <Image
+              src="/assets/exkitchens_leaf_logo.png"
+              alt="ExKitchens"
+              width={160}
+              height={36}
+              loading="eager"
+              style={{ width: "auto", height: "auto" }}
+              className={`object-contain absolute inset-0 transition-opacity duration-500 ${
+                scrolled ? "opacity-100" : "opacity-0"
+              }`}
+            />
+            {/* White logo — visible on transparent hero navbar */}
+            <Image
+              src="/assets/exkitchens_leaf_logo_white.png"
+              alt="ExKitchens"
+              width={160}
+              height={36}
+              loading="eager"
+              style={{ width: "auto", height: "auto" }}
+              className={`object-contain absolute inset-0 transition-opacity duration-500 drop-shadow-sm ${
+                scrolled ? "opacity-0" : "opacity-100"
+              }`}
+            />
+          </span>
         </a>
 
         {/* Desktop Links */}
@@ -55,22 +68,12 @@ export default function Navbar() {
               key={link.label}
               href={link.href}
               className={`text-[13px] font-medium tracking-wide transition-colors hover:text-[#3d7a44] ${
-                scrolled ? "text-gray-600" : "text-white/70 hover:text-white"
+                scrolled ? "text-gray-500" : "text-white/70 hover:text-white"
               }`}
             >
               {link.label}
             </a>
           ))}
-          <a
-            href="#sell"
-            className={`ml-2 px-5 py-2 rounded-full text-[13px] font-semibold transition-all ${
-              scrolled
-                ? "bg-[#1a1a1a] text-white hover:bg-[#333]"
-                : "bg-white/15 text-white backdrop-blur-sm border border-white/20 hover:bg-white/25"
-            }`}
-          >
-            Get Started
-          </a>
         </div>
 
         {/* Mobile Menu Button */}
@@ -135,9 +138,9 @@ export default function Navbar() {
               <a
                 href="#sell"
                 onClick={() => setMobileOpen(false)}
-                className="mt-8 px-6 py-3.5 rounded-full bg-[#1a1a1a] text-white text-center font-medium"
+                className="mt-8 px-6 py-3.5 rounded-full bg-[#1a1a1a] text-white text-center font-medium hover:bg-[#333] transition-colors"
               >
-                Get Started
+                Sell Your Kitchen
               </a>
             </motion.div>
           </>

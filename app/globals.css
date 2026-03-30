@@ -9,6 +9,7 @@
   --color-dark: #1a1a1a;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-serif: var(--font-playfair), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-lora: var(--font-lora), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 }
 
 :root {
@@ -62,6 +63,15 @@ html {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
   }
 }
 

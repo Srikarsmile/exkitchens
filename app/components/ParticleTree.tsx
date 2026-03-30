@@ -50,7 +50,8 @@ async function createTreeScene(
   // Renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(width, height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const isMobile = width < 768;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
   container.appendChild(renderer.domElement);
 
   // Controls
@@ -277,7 +278,8 @@ async function createTreeScene(
   branchTips.forEach((tip) => {
     addLeafCluster(tip.x, tip.y, tip.z, 2.5 + Math.random() * 1.5, 400);
   });
-  addLeafCluster(0, 12, 0, 8, 15000 - branchTips.length * 400);
+  const leafTotal = isMobile ? 5000 : 15000;
+  addLeafCluster(0, 12, 0, 8, leafTotal - branchTips.length * 400);
 
   const leafGeometry = new THREE.BufferGeometry();
   leafGeometry.setAttribute("position", new THREE.Float32BufferAttribute(leafPositions, 3));
@@ -299,7 +301,7 @@ async function createTreeScene(
   scene.add(leafParticles);
 
   // --- Falling leaves ---
-  const fallingCount = 200;
+  const fallingCount = isMobile ? 60 : 200;
   const fallingPositions = new Float32Array(fallingCount * 3);
   const fallingColors = new Float32Array(fallingCount * 3);
   const fallingSpeeds: number[] = [];
@@ -336,7 +338,7 @@ async function createTreeScene(
   scene.add(fallingLeaves);
 
   // --- Ground particles ---
-  const groundCount = 5000;
+  const groundCount = isMobile ? 1500 : 5000;
   const groundPositions = new Float32Array(groundCount * 3);
   const groundColors = new Float32Array(groundCount * 3);
 
@@ -418,7 +420,7 @@ async function createTreeScene(
     }
 
     leafPalette = newPalette;
-    morphStartTime = clock.getElapsedTime();
+    morphStartTime = timer.getElapsed();
     morphing = true;
   }
 
@@ -438,7 +440,7 @@ async function createTreeScene(
   }
 
   // --- Animation ---
-  const clock = new THREE.Clock();
+  const timer = new THREE.Timer();
   let animFrameId = 0;
   let isVisible = true;
 
@@ -446,7 +448,8 @@ async function createTreeScene(
     animFrameId = requestAnimationFrame(animate);
     if (!isVisible) return;
 
-    const time = clock.getElapsedTime();
+    timer.update();
+    const time = timer.getElapsed();
     const mRadSq = mouseRadius * mouseRadius;
     const mxW = mouseWorld.x, myW = mouseWorld.y, mzW = mouseWorld.z;
 
@@ -654,7 +657,7 @@ export default function ParticleTree() {
 
   return (
     <section className="w-full bg-white relative overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#3d7a44]/20 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#3d7a44]/30 to-transparent" />
 
       {/* Section header */}
       <motion.div

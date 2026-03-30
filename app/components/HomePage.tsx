@@ -8,6 +8,7 @@ import HowItWorks from "./HowItWorks";
 import FeaturedKitchens from "./FeaturedKitchens";
 
 import SocialProof from "./SocialProof";
+
 import ParticleTree from "./ParticleTree";
 import SellCTA from "./SellCTA";
 import Footer from "./Footer";
@@ -23,7 +24,7 @@ const SPLINE_SCENES = {
 
 export default function HomePage() {
   return (
-    <main id="main-content" className="flex min-h-screen flex-col items-center overflow-hidden bg-[#fafafa]">
+    <main id="main-content" className="relative flex min-h-screen flex-col items-center overflow-hidden bg-[#fafafa]">
       <Navbar />
       <HeroSection splineUrl={SPLINE_SCENES.hero} />
       <MissionSection splineUrl={SPLINE_SCENES.mission} />

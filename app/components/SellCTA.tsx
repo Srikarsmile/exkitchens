@@ -37,7 +37,7 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.7 }}
           >
-            <span className="text-[#5a9c64] font-semibold tracking-widest uppercase text-xs mb-6 block">
+            <span className="text-[#5a9c64] font-semibold tracking-widest uppercase text-xs mb-5 block">
               Sell Your Kitchen
             </span>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-light text-white mb-6 leading-[1.1]">
@@ -52,11 +52,11 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
               hassle-free.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 mb-10">
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-10">
               <a
                 href="#sell"
                 onClick={(e) => { e.preventDefault(); setToast("Free valuation coming soon! Call 123 456 789"); setTimeout(() => setToast(null), 3500); }}
-                className="px-8 py-4 rounded-full bg-white text-[#1a1a1a] font-medium tracking-wide hover:bg-[#5a9c64] hover:text-white transition-all flex items-center gap-3 group"
+                className="px-8 py-4 rounded-full bg-white text-[#1a1a1a] font-medium tracking-wide hover:bg-[#3d7a44] hover:text-white transition-all flex items-center gap-3 group"
               >
                 Get a Free Valuation
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -76,7 +76,7 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-5 text-white/25 text-xs tracking-wide">
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-5 text-white/25 text-xs tracking-wide">
               <span>Free valuation</span>
               <span className="w-1 h-1 rounded-full bg-white/15" />
               <span>No obligation</span>

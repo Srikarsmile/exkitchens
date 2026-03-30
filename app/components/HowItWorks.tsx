@@ -59,7 +59,7 @@ export default function HowItWorks() {
           </h2>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 relative">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8 relative">
           {/* Connecting line */}
           <div className="hidden md:block absolute top-[48px] left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-[#3d7a44]/20 to-transparent z-0" />
 
@@ -74,7 +74,7 @@ export default function HowItWorks() {
                 transition={{ duration: 0.5, delay: i * 0.15 }}
                 className="relative z-10 flex flex-col items-center text-center group"
               >
-                <div className="w-24 h-24 rounded-3xl bg-white border border-gray-200 flex items-center justify-center mb-8 shadow-sm group-hover:shadow-lg group-hover:border-[#3d7a44]/30 transition-all duration-500">
+                <div className="w-24 h-24 rounded-3xl bg-white border border-gray-200 flex items-center justify-center mb-6 md:mb-8 shadow-sm group-hover:shadow-lg group-hover:border-[#3d7a44]/30 transition-all duration-500">
                   <Icon className="w-9 h-9 text-[#3d7a44] group-hover:scale-110 transition-transform duration-500" />
                 </div>
                 <span className="text-[10px] text-[#3d7a44]/40 font-bold tracking-widest mb-3">

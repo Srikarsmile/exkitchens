@@ -18,17 +18,17 @@ const legalLinks = [
 export default function Footer() {
   return (
     <footer className="w-full bg-[#111111] text-white relative overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#3d7a44]/40 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#3d7a44]/30 to-transparent" />
 
       <div className="max-w-7xl mx-auto px-6 md:px-8 py-12">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           {/* Logo */}
           <Image
-            src="/assets/exkitchens_leaf_logo.png"
+            src="/assets/exkitchens_leaf_logo_white.png"
             alt="ExKitchens"
             width={140}
             height={28}
-            className="object-contain brightness-0 invert"
+            className="object-contain"
           />
 
           {/* Links */}
@@ -46,7 +46,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-10 pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="mt-10 pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
           <p className="text-white/30 text-xs">
             &copy; {new Date().getFullYear()} ExKitchens. All rights reserved.
           </p>

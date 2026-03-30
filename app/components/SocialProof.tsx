@@ -5,11 +5,11 @@ import { Star, Quote } from "lucide-react";
 import SplitText from "./SplitText";
 
 
-const mediaFeatures = [
-  { name: "Grand Designs", size: "text-2xl md:text-3xl" },
-  { name: "BBC", size: "text-3xl md:text-4xl" },
-  { name: "Homes & Gardens", size: "text-xl md:text-2xl" },
-  { name: "George Clarke", size: "text-xl md:text-2xl" },
+const brandFeatures = [
+  { name: "Bulthaup", size: "text-2xl md:text-3xl" },
+  { name: "Poggenpohl", size: "text-3xl md:text-4xl" },
+  { name: "SieMatic", size: "text-xl md:text-2xl" },
+  { name: "Leicht", size: "text-xl md:text-2xl" },
 ];
 
 const testimonials = [
@@ -42,7 +42,7 @@ const testimonials = [
 export default function SocialProof() {
   return (
     <section className="w-full py-28 bg-white relative overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#3d7a44]/30 to-transparent" />
       {/* As Featured In */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -51,11 +51,11 @@ export default function SocialProof() {
         transition={{ duration: 0.6 }}
         className="max-w-5xl mx-auto px-6 md:px-8 text-center mb-20"
       >
-        <span className="text-gray-900 text-xs font-semibold tracking-widest uppercase mb-10 block">
-          As Featured In
+        <span className="text-[#3d7a44] text-xs font-semibold tracking-widest uppercase mb-10 block">
+          Brands We Carry
         </span>
         <div className="flex flex-wrap items-center justify-center gap-10 md:gap-16">
-          {mediaFeatures.map((item) => (
+          {brandFeatures.map((item) => (
             <span
               key={item.name}
               className={`${item.size} font-serif italic text-gray-900 hover:text-[#3d7a44] transition-colors duration-500 cursor-default`}
@@ -82,13 +82,13 @@ export default function SocialProof() {
             <SplitText
               text="Loved by"
               className="block"
-              charDelay={0.04}
+              charDelay={0.03}
               duration={0.75}
             />
             <SplitText
               text="Homeowners"
               className="block font-serif italic text-[#3d7a44]"
-              charDelay={0.045}
+              charDelay={0.04}
               duration={0.8}
               italic
             />

@@ -118,12 +118,6 @@ function TiltCard({ children }: { children: React.ReactNode }) {
 
 export default function FeaturedKitchens() {
   const [filter, setFilter] = useState<FilterType>("all");
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3500);
-  };
 
   const filtered =
     filter === "all" ? listings : listings.filter((l) => l.type === filter);
@@ -153,7 +147,7 @@ export default function FeaturedKitchens() {
               Premium ex-display kitchens from {"\u00a3"}1,950.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {(["all", "buy", "auction"] as FilterType[]).map((f) => (
               <button
                 key={f}
@@ -250,13 +244,13 @@ export default function FeaturedKitchens() {
                         </div>
                       )}
 
-                      <button
-                        onClick={() => showToast("Kitchen details coming soon!")}
+                      <a
+                        href="#sell"
                         aria-label={`View details for ${item.title}`}
                         className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 group-hover:bg-[#3d7a44] group-hover:border-[#3d7a44] group-hover:text-white active:bg-[#3d7a44] active:border-[#3d7a44] active:text-white transition-all duration-300"
                       >
                         <ArrowRight className="w-3.5 h-3.5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -272,20 +266,14 @@ export default function FeaturedKitchens() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-center mt-14"
         >
-          <button
-            onClick={() => showToast("Coming soon \u2014 we\u2019re adding more kitchens every day!")}
-            className="inline-flex items-center gap-3 px-7 py-3 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-[#1a1a1a] hover:text-white transition-all duration-300 group"
+          <span
+            className="inline-flex items-center gap-3 px-7 py-3 rounded-full text-sm font-medium bg-gray-100 text-gray-400 cursor-default"
           >
-            View All 2,000+ Kitchens
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
+            Browse All Kitchens
+            <span className="text-[10px] uppercase tracking-wider text-gray-400 bg-gray-50 px-2 py-0.5 rounded">Coming Soon</span>
+          </span>
         </motion.div>
       </div>
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full bg-[#1a1a1a] text-white text-sm font-medium shadow-xl border border-white/10">
-          {toast}
-        </div>
-      )}
     </section>
   );
 }

@@ -7,7 +7,6 @@ const jsonLd = {
   description:
     "The UK\u2019s largest marketplace for premium ex-display and pre-loved kitchens.",
   url: "https://www.exkitchens.com",
-  telephone: "+123456789",
   email: "info@exkitchens.com",
   address: {
     "@type": "PostalAddress",
