@@ -608,15 +608,13 @@ async function createTreeScene(
 export default function ParticleTree() {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<Awaited<ReturnType<typeof createTreeScene>> | null>(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [reducedMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const [sceneReady, setSceneReady] = useState(false);
   const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    setReducedMotion(
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    );
-  }, []);
 
   // IntersectionObserver: init scene on first view, pause/resume on visibility
   useEffect(() => {

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ListingCardData } from "@/lib/marketplace-shared";
 import Navbar from "./Navbar";
 import HeroSection from "./HeroSection";
 
@@ -22,14 +23,18 @@ const SPLINE_SCENES = {
   sellCta: null as string | null,
 };
 
-export default function HomePage() {
+interface HomePageProps {
+  featuredListings: ListingCardData[];
+}
+
+export default function HomePage({ featuredListings }: HomePageProps) {
   return (
     <main id="main-content" className="relative flex min-h-screen flex-col items-center overflow-hidden bg-[#fafafa]">
       <Navbar />
       <HeroSection splineUrl={SPLINE_SCENES.hero} />
       <MissionSection splineUrl={SPLINE_SCENES.mission} />
       <HowItWorks />
-      <FeaturedKitchens />
+      <FeaturedKitchens items={featuredListings} />
       <SocialProof />
       <ParticleTree />
       <SellCTA splineUrl={SPLINE_SCENES.sellCta} />

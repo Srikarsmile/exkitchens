@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   motion,
   useScroll,
@@ -8,6 +8,7 @@ import {
 } from "framer-motion";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import SplineScene from "./SplineScene";
 import SplitText from "./SplitText";
 
@@ -16,7 +17,11 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ splineUrl }: HeroSectionProps) {
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [reducedMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -25,10 +30,6 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
   const textY = useTransform(scrollYProgress, [0, 1], [0, reducedMotion ? 0 : 100]);
   const textOpacity = useTransform(scrollYProgress, [0, 0.5], [1, reducedMotion ? 1 : 0]);
   const imageScale = useTransform(scrollYProgress, [0, 1], [1, reducedMotion ? 1 : 1.1]);
-
-  useEffect(() => {
-    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  }, []);
 
   const imageFallback = (
     <div className="absolute inset-0">
@@ -114,15 +115,15 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
           transition={{ duration: 0.7, delay: 0.9 }}
           className="flex flex-wrap items-center justify-center gap-4"
         >
-          <a
-            href="#kitchens"
+          <Link
+            href="/marketplace"
             className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 font-medium tracking-wide hover:bg-white hover:text-[#1a1a1a] transition-all duration-300 group"
           >
             <span className="shimmer-text bg-clip-text text-transparent bg-[length:200%_100%] bg-[linear-gradient(90deg,rgba(255,255,255,0.5)_0%,rgba(255,255,255,1)_50%,rgba(255,255,255,0.5)_100%)] animate-[shimmer_3s_ease-in-out_infinite] group-hover:bg-none group-hover:text-[#1a1a1a]">
               Explore
             </span>
             <ArrowRight className="w-4 h-4 text-white group-hover:text-[#1a1a1a] group-hover:translate-x-1 transition-all" />
-          </a>
+          </Link>
           <a
             href="#sell"
             className="px-10 py-4 rounded-full border border-white/15 text-white/70 font-medium tracking-wide hover:bg-white/10 hover:text-white transition-all duration-300"

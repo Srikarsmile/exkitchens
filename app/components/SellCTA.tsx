@@ -55,7 +55,7 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-10">
               <a
                 href="#sell"
-                onClick={(e) => { e.preventDefault(); setToast("Free valuation coming soon! Call 123 456 789"); setTimeout(() => setToast(null), 3500); }}
+                onClick={(e) => { e.preventDefault(); setToast("Call 123 456 789 for a free valuation."); setTimeout(() => setToast(null), 3500); }}
                 className="px-8 py-4 rounded-full bg-white text-[#1a1a1a] font-medium tracking-wide hover:bg-[#3d7a44] hover:text-white transition-all flex items-center gap-3 group"
               >
                 Get a Free Valuation

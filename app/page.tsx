@@ -1,4 +1,7 @@
 import HomePage from "@/app/components/HomePage";
+import { getFeaturedListings } from "@/lib/marketplace";
+
+export const revalidate = 300;
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -21,7 +24,9 @@ const jsonLd = {
   },
 };
 
-export default function Page() {
+export default async function Page() {
+  const featuredListings = await getFeaturedListings();
+
   return (
     <>
       <script
@@ -30,7 +35,7 @@ export default function Page() {
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <HomePage />
+      <HomePage featuredListings={featuredListings} />
     </>
   );
 }

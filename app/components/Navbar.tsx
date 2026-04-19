@@ -4,17 +4,24 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const navLinks = [
-  { label: "Kitchens", href: "#kitchens" },
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Our Story", href: "#mission" },
-  { label: "Sell Yours", href: "#sell" },
+  { label: "Marketplace", href: "/marketplace" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Our Story", href: "/#mission" },
+  { label: "Sell Yours", href: "/#sell" },
 ];
 
-export default function Navbar() {
+interface NavbarProps {
+  forceSolid?: boolean;
+}
+
+export default function Navbar({ forceSolid = false }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 100);
@@ -22,17 +29,29 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const isSolid = forceSolid || scrolled;
+
   return (
     <>
       <nav
         aria-label="Main navigation"
         className={`fixed top-0 w-full z-50 flex items-center justify-between px-6 md:px-10 py-3.5 transition-all duration-500 ${
-          scrolled
+          isSolid
             ? "bg-white/90 backdrop-blur-2xl border-b border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
             : "bg-transparent"
         }`}
       >
-        <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0 }); }} aria-label="ExKitchens - Back to top" className="flex items-center">
+        <Link
+          href="/"
+          onClick={(e) => {
+            if (pathname === "/") {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+          }}
+          aria-label="ExKitchens - Back to top"
+          className="flex items-center"
+        >
           <span className="relative block" style={{ width: 160, height: 36 }}>
             {/* Dark logo — visible when scrolled (white navbar) */}
             <Image
@@ -42,7 +61,7 @@ export default function Navbar() {
               sizes="160px"
               loading="eager"
               className={`object-contain transition-opacity duration-500 ${
-                scrolled ? "opacity-100" : "opacity-0"
+                isSolid ? "opacity-100" : "opacity-0"
               }`}
             />
             {/* White logo — visible on transparent hero navbar */}
@@ -53,25 +72,35 @@ export default function Navbar() {
               sizes="160px"
               loading="eager"
               className={`object-contain transition-opacity duration-500 drop-shadow-sm ${
-                scrolled ? "opacity-0" : "opacity-100"
+                isSolid ? "opacity-0" : "opacity-100"
               }`}
             />
           </span>
-        </a>
+        </Link>
 
         {/* Desktop Links */}
         <div className="hidden lg:flex items-center gap-7">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.label}
               href={link.href}
               className={`text-[13px] font-medium tracking-wide transition-colors hover:text-[#3d7a44] ${
-                scrolled ? "text-gray-500" : "text-white/70 hover:text-white"
+                isSolid ? "text-gray-500" : "text-white/70 hover:text-white"
               }`}
             >
               {link.label}
-            </a>
+            </Link>
           ))}
+          <Link
+            href="/login"
+            className={`rounded-full px-4 py-2 text-[13px] font-medium tracking-wide transition-colors ${
+              isSolid
+                ? "bg-[#1a1a1a] text-white hover:bg-[#2b2b2b]"
+                : "bg-white/10 text-white hover:bg-white hover:text-[#1a1a1a]"
+            }`}
+          >
+            Sign In
+          </Link>
         </div>
 
         {/* Mobile Menu Button */}
@@ -80,7 +109,7 @@ export default function Navbar() {
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
           className={`lg:hidden p-2 rounded-lg transition-colors ${
-            scrolled
+            isSolid
               ? "text-gray-900 hover:bg-gray-100"
               : "text-white hover:bg-white/10"
           }`}
@@ -120,26 +149,29 @@ export default function Navbar() {
               </button>
               <div className="flex flex-col gap-1">
                 {navLinks.map((link, i) => (
-                  <motion.a
+                  <motion.div
                     key={link.label}
-                    href={link.href}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    onClick={() => setMobileOpen(false)}
-                    className="text-2xl font-light text-gray-900 py-3 border-b border-gray-100 hover:text-[#3d7a44] transition-colors"
                   >
-                    {link.label}
-                  </motion.a>
+                    <Link
+                      href={link.href}
+                      onClick={() => setMobileOpen(false)}
+                      className="block text-2xl font-light text-gray-900 py-3 border-b border-gray-100 hover:text-[#3d7a44] transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </motion.div>
                 ))}
               </div>
-              <a
-                href="#sell"
+              <Link
+                href="/login"
                 onClick={() => setMobileOpen(false)}
                 className="mt-8 px-6 py-3.5 rounded-full bg-[#1a1a1a] text-white text-center font-medium hover:bg-[#333] transition-colors"
               >
-                Sell Your Kitchen
-              </a>
+                Sign In
+              </Link>
             </motion.div>
           </>
         )}

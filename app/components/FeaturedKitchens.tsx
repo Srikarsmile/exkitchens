@@ -4,79 +4,22 @@ import { useState, useRef, useEffect, type MouseEvent } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Clock, Tag } from "lucide-react";
 import Image from "next/image";
-
-const listings = [
-  {
-    id: 1,
-    title: "The Minimalist Oat",
-    currentBid: "12,500",
-    endsIn: "2h 45m",
-    type: "auction" as const,
-    image: "/assets/kitchen_nano_square.png",
-    tags: ["Gaggenau", "Solid Oak"],
-    brand: "Bulthaup",
-  },
-  {
-    id: 2,
-    title: "Classic White Shaker",
-    price: "18,900",
-    originalPrice: "45,000",
-    type: "buy" as const,
-    image: "/assets/kitchen_nano_portrait.png",
-    tags: ["Bespoke Cabinetry", "Marble Island"],
-    brand: "Poggenpohl",
-  },
-  {
-    id: 3,
-    title: "Scandinavian Light Ash",
-    currentBid: "9,200",
-    endsIn: "5h 10m",
-    type: "auction" as const,
-    image: "/assets/kitchen_hero_ultra_clear_1774361090040.png",
-    tags: ["Integrated Handles", "Siemens"],
-    brand: "Nobilia",
-  },
-  {
-    id: 4,
-    title: "Modern Matte Charcoal",
-    currentBid: "8,500",
-    endsIn: "4h 12m",
-    type: "auction" as const,
-    image: "/assets/kitchen_nano_landscape.png",
-    tags: ["Miele", "Quartz Surfaces"],
-    brand: "Siematic",
-  },
-  {
-    id: 5,
-    title: "Handleless Dove Grey",
-    price: "11,225",
-    originalPrice: "32,000",
-    type: "buy" as const,
-    image: "/assets/kitchen_fal_landscape.png",
-    tags: ["Bosch", "Dekton Worktops"],
-    brand: "Schuller",
-  },
-  {
-    id: 6,
-    title: "Heritage Painted Sage",
-    price: "9,995",
-    originalPrice: "28,500",
-    type: "buy" as const,
-    image: "/assets/kitchen_fal_square.png",
-    tags: ["Belfast Sink", "Granite"],
-    brand: "Clive Christian",
-  },
-];
+import Link from "next/link";
+import type { ListingCardData } from "@/lib/marketplace-shared";
+import { formatMoney, formatTimeRemaining } from "@/lib/marketplace-shared";
 
 type FilterType = "all" | "buy" | "auction";
 
 function TiltCard({ children }: { children: React.ReactNode }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [reducedMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
 
   useEffect(() => {
-    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
@@ -116,11 +59,15 @@ function TiltCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function FeaturedKitchens() {
+export default function FeaturedKitchens({ items }: { items: ListingCardData[] }) {
   const [filter, setFilter] = useState<FilterType>("all");
 
   const filtered =
-    filter === "all" ? listings : listings.filter((l) => l.type === filter);
+    filter === "all"
+      ? items
+      : items.filter((item) =>
+          filter === "auction" ? item.saleType === "auction" : item.saleType === "buy_now",
+        );
 
   return (
     <section
@@ -166,6 +113,23 @@ export default function FeaturedKitchens() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.length === 0 ? (
+            <div className="col-span-full rounded-[2rem] border border-dashed border-gray-200 bg-[#fafafa] px-6 py-12 text-center">
+              <h3 className="text-xl font-medium text-gray-900">No featured kitchens yet</h3>
+              <p className="mt-3 text-sm text-gray-500">
+                Create published listings in the admin panel and they will appear here.
+              </p>
+              <div className="mt-6">
+                <Link
+                  href="/marketplace"
+                  className="rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
+                >
+                  Open marketplace
+                </Link>
+              </div>
+            </div>
+          ) : null}
+
           {filtered.map((item, index) => (
             <motion.div
               key={item.id}
@@ -180,10 +144,10 @@ export default function FeaturedKitchens() {
                   <div className="relative h-[240px] w-full overflow-hidden bg-gray-50">
                     {/* Badges */}
                     <div className="absolute top-3 left-3 z-10 flex gap-2">
-                      {item.type === "auction" ? (
+                      {item.saleType === "auction" ? (
                         <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold">
                           <Clock className="w-3 h-3" />
-                          {item.endsIn}
+                          {formatTimeRemaining(item.auction?.endAt)}
                         </div>
                       ) : (
                         <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#3d7a44]/80 backdrop-blur-md text-white text-[11px] font-semibold">
@@ -194,12 +158,12 @@ export default function FeaturedKitchens() {
                     </div>
                     <div className="absolute top-3 right-3 z-10">
                       <span className="px-2.5 py-1 rounded-md bg-white/90 backdrop-blur-md text-[11px] font-semibold text-gray-600">
-                        {item.brand}
+                        {item.brand || "Curated"}
                       </span>
                     </div>
 
                     <Image
-                      src={item.image}
+                      src={item.heroImageUrl || "/assets/kitchen_nano_square.png"}
                       alt={item.title}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -224,13 +188,13 @@ export default function FeaturedKitchens() {
                     </h3>
 
                     <div className="flex items-end justify-between mt-4 pt-4 border-t border-gray-100">
-                      {item.type === "buy" ? (
+                      {item.saleType === "buy_now" ? (
                         <div>
                           <span className="text-gray-300 line-through text-xs block">
-                            RRP {"\u00a3"}{item.originalPrice}
+                            {item.originalPricePence ? formatMoney(item.originalPricePence) : "RRP on request"}
                           </span>
                           <span className="text-2xl font-medium text-gray-900">
-                            {"\u00a3"}{item.price}
+                            {formatMoney(item.buyNowPricePence ?? item.currentPricePence)}
                           </span>
                         </div>
                       ) : (
@@ -239,18 +203,18 @@ export default function FeaturedKitchens() {
                             Current Bid
                           </span>
                           <span className="text-2xl font-medium text-gray-900">
-                            {"\u00a3"}{item.currentBid}
+                            {formatMoney(item.currentPricePence)}
                           </span>
                         </div>
                       )}
 
-                      <a
-                        href="#sell"
+                      <Link
+                        href={`/marketplace/${item.slug}`}
                         aria-label={`View details for ${item.title}`}
                         className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 group-hover:bg-[#3d7a44] group-hover:border-[#3d7a44] group-hover:text-white active:bg-[#3d7a44] active:border-[#3d7a44] active:text-white transition-all duration-300"
                       >
                         <ArrowRight className="w-3.5 h-3.5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -266,12 +230,13 @@ export default function FeaturedKitchens() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-center mt-14"
         >
-          <span
-            className="inline-flex items-center gap-3 px-7 py-3 rounded-full text-sm font-medium bg-gray-100 text-gray-400 cursor-default"
+          <Link
+            href="/marketplace"
+            className="inline-flex items-center gap-3 px-7 py-3 rounded-full text-sm font-medium bg-gray-100 text-gray-600 transition hover:bg-gray-200"
           >
             Browse All Kitchens
-            <span className="text-[10px] uppercase tracking-wider text-gray-400 bg-gray-50 px-2 py-0.5 rounded">Coming Soon</span>
-          </span>
+            <span className="text-[10px] uppercase tracking-wider text-[#3d7a44] bg-white px-2 py-0.5 rounded">Live</span>
+          </Link>
         </motion.div>
       </div>
     </section>
