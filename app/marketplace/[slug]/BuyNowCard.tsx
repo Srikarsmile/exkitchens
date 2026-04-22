@@ -14,12 +14,16 @@ interface BuyNowCardProps {
   listingId: string;
   slug: string;
   amountPence: number | null;
+  supportPhone: string;
+  supportPhoneHref: string;
 }
 
 export default function BuyNowCard({
   listingId,
   slug,
   amountPence,
+  supportPhone,
+  supportPhoneHref,
 }: BuyNowCardProps) {
   const [state, action] = useActionState(createBuyNowOrderAction, initialState);
 
@@ -34,8 +38,9 @@ export default function BuyNowCard({
       <div>
         <h2 className="text-xl font-medium text-gray-900">Buy now</h2>
         <p className="mt-2 text-sm text-gray-500">
-          Reserve this kitchen for {formatMoney(amountPence)} and move payment into
-          your account workflow.
+          Reserve this kitchen for {formatMoney(amountPence)} and complete the
+          next step straight away. Your order stays visible in your account after
+          payment.
         </p>
       </div>
 
@@ -52,10 +57,22 @@ export default function BuyNowCard({
       ) : null}
 
       <SubmitButton
-        idleLabel="Start checkout"
-        pendingLabel="Starting checkout..."
+        idleLabel="Buy now"
+        pendingLabel="Opening checkout..."
         className="w-full rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b] disabled:cursor-not-allowed disabled:opacity-70"
       />
+
+      <div className="space-y-3 border-t border-gray-100 pt-4">
+        <p className="text-sm leading-6 text-gray-500">
+          If you still have questions about this kitchen, call us.
+        </p>
+        <a
+          href={supportPhoneHref}
+          className="inline-flex w-full items-center justify-center rounded-full border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
+        >
+          Call us on {supportPhone}
+        </a>
+      </div>
     </form>
   );
 }

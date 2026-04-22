@@ -4,6 +4,16 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { deliverPendingNotificationEmails } from "@/lib/email";
+import {
+  getListingImageHostPolicyMessage,
+  isAllowedListingImageUrl,
+} from "@/lib/listing-image-hosts";
+import {
+  readGalleryImageFiles,
+  readHeroImageFile,
+  removeListingImages,
+  uploadListingImages,
+} from "@/lib/listing-image-storage";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { bidAmountToPence } from "@/lib/marketplace-shared";
@@ -12,6 +22,7 @@ import { runMarketplaceMaintenance } from "@/lib/marketplace";
 export interface AdminActionState {
   message?: string;
   success?: boolean;
+  listingSlug?: string;
 }
 
 const createListingSchema = z.object({
@@ -21,7 +32,14 @@ const createListingSchema = z.object({
   summary: z.string().trim().min(10, "Add a short summary."),
   description: z.string().trim().optional(),
   location: z.string().trim().optional(),
-  heroImageUrl: z.string().url("Hero image must be a valid URL.").or(z.literal("")),
+  heroImageUrl: z
+    .string()
+    .trim()
+    .refine(
+      (value) =>
+        !value || value.startsWith("/") || z.string().url().safeParse(value).success,
+      "Hero image must be a valid URL or site-relative path.",
+    ),
   galleryUrls: z.string().optional(),
   tags: z.string().optional(),
   saleType: z.enum(["auction", "buy_now"]),
@@ -32,6 +50,8 @@ const createListingSchema = z.object({
   reservePrice: z.coerce.number().positive().optional(),
   auctionStartsAt: z.string().optional(),
   auctionEndsAt: z.string().optional(),
+  auctionStartsAtOffsetMinutes: z.coerce.number().int().min(-840).max(840).optional(),
+  auctionEndsAtOffsetMinutes: z.coerce.number().int().min(-840).max(840).optional(),
   sellerProfileId: z.string().uuid().optional().or(z.literal("")),
   featured: z.boolean().optional(),
 });
@@ -93,6 +113,43 @@ function normaliseGalleryUrls(input: string | undefined) {
     .filter(Boolean);
 }
 
+function normaliseDateTimeInput(
+  input: string | undefined,
+  offsetMinutes: number | undefined,
+) {
+  const value = input?.trim();
+
+  if (!value) {
+    return null;
+  }
+
+  if (offsetMinutes == null || !Number.isFinite(offsetMinutes)) {
+    return null;
+  }
+
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day, hour, minute, second = "0"] = match;
+  const utcTimestamp =
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    ) +
+    offsetMinutes * 60_000;
+
+  return new Date(utcTimestamp).toISOString();
+}
+
 function revalidateAppPaths(slug?: string | null) {
   revalidatePath("/");
   revalidatePath("/marketplace");
@@ -133,6 +190,10 @@ export async function createListingAction(
     reservePrice: formData.get("reservePrice") || undefined,
     auctionStartsAt: formData.get("auctionStartsAt")?.toString().trim() || undefined,
     auctionEndsAt: formData.get("auctionEndsAt")?.toString().trim() || undefined,
+    auctionStartsAtOffsetMinutes:
+      formData.get("auctionStartsAtOffsetMinutes")?.toString().trim() || undefined,
+    auctionEndsAtOffsetMinutes:
+      formData.get("auctionEndsAtOffsetMinutes")?.toString().trim() || undefined,
     sellerProfileId: formData.get("sellerProfileId")?.toString().trim() || undefined,
     featured: formData.get("featured") === "on",
   });
@@ -143,9 +204,69 @@ export async function createListingAction(
     };
   }
 
-  const admin = await requireAdmin("/admin");
+  const admin = await requireAdmin("/admin/listings/new");
   const data = parsed.data;
   const slug = slugify(data.slug || data.title);
+  const heroFile = readHeroImageFile(formData);
+  const galleryFiles = readGalleryImageFiles(formData);
+  const auctionStartsAt = normaliseDateTimeInput(
+    data.auctionStartsAt,
+    data.auctionStartsAtOffsetMinutes,
+  );
+  const auctionEndsAt = normaliseDateTimeInput(
+    data.auctionEndsAt,
+    data.auctionEndsAtOffsetMinutes,
+  );
+
+  if (data.auctionStartsAt && !auctionStartsAt) {
+    return {
+      message:
+        "Auction start time is not valid. Pick the date again so the timezone can be captured.",
+    };
+  }
+
+  if (data.auctionEndsAt && !auctionEndsAt) {
+    return {
+      message:
+        "Auction end time is not valid. Pick the date again so the timezone can be captured.",
+    };
+  }
+
+  let uploadedPaths: string[] = [];
+  let heroImageUrl = data.heroImageUrl || null;
+  let galleryImageUrls = normaliseGalleryUrls(data.galleryUrls);
+
+  const invalidHostedImageUrls = [heroImageUrl, ...galleryImageUrls].filter(
+    (value): value is string => Boolean(value && !isAllowedListingImageUrl(value)),
+  );
+
+  if (invalidHostedImageUrls.length > 0) {
+    return {
+      message: getListingImageHostPolicyMessage(),
+    };
+  }
+
+  if (heroFile || galleryFiles.length > 0) {
+    try {
+      const uploaded = await uploadListingImages({
+        listingSlug: slug,
+        heroFile,
+        galleryFiles,
+      });
+
+      uploadedPaths = uploaded.uploadedPaths;
+      heroImageUrl = uploaded.heroImageUrl || heroImageUrl;
+      galleryImageUrls = [...uploaded.galleryImageUrls, ...galleryImageUrls];
+    } catch (error) {
+      return {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Image upload failed. Try again.",
+      };
+    }
+  }
+
   const supabase = await createClient();
 
   const { data: listingResult, error } = await supabase.rpc("create_listing_with_auction", {
@@ -155,8 +276,8 @@ export async function createListingAction(
     p_summary: data.summary,
     p_description: data.description || null,
     p_location: data.location || null,
-    p_hero_image_url: data.heroImageUrl || null,
-    p_gallery_urls: normaliseGalleryUrls(data.galleryUrls),
+    p_hero_image_url: heroImageUrl,
+    p_gallery_urls: galleryImageUrls,
     p_tags: normaliseTagList(data.tags),
     p_sale_type: data.saleType,
     p_featured: data.featured ?? false,
@@ -169,12 +290,13 @@ export async function createListingAction(
     p_bid_increment_pence: bidAmountToPence(data.bidIncrement ?? 50) ?? 5000,
     p_reserve_price_pence:
       data.reservePrice != null ? bidAmountToPence(data.reservePrice) : null,
-    p_auction_starts_at: data.auctionStartsAt || null,
-    p_auction_ends_at: data.auctionEndsAt || null,
+    p_auction_starts_at: auctionStartsAt,
+    p_auction_ends_at: auctionEndsAt,
     p_seller_profile_id: data.sellerProfileId || admin.user?.id || null,
   });
 
   if (error) {
+    await removeListingImages(uploadedPaths);
     return { message: error.message };
   }
 
@@ -184,6 +306,7 @@ export async function createListingAction(
   return {
     success: true,
     message: `Listing created: ${created?.listing_slug ?? slug}`,
+    listingSlug: created?.listing_slug ?? slug,
   };
 }
 

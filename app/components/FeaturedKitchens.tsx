@@ -163,7 +163,7 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
                     </div>
 
                     <Image
-                      src={item.heroImageUrl || "/assets/kitchen_nano_square.png"}
+                      src={item.heroImageUrl || "/assets/kitchen_nano_square.jpg"}
                       alt={item.title}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"

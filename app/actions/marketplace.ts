@@ -30,9 +30,20 @@ const orderCheckoutSchema = z.object({
   orderId: z.string().uuid(),
 });
 
+const releaseOrderSchema = z.object({
+  orderId: z.string().uuid(),
+  listingSlug: z.string().trim().optional(),
+  redirectPath: z.string().trim().optional(),
+});
+
 const notificationSchema = z.object({
   notificationId: z.string().uuid(),
+  redirectPath: z.string().trim().optional(),
 });
+
+function normaliseNotificationRedirectPath(value?: string | null) {
+  return value === "/admin" ? "/admin" : "/account";
+}
 
 function revalidateMarketplacePaths(slug?: string | null, redirectPath?: string | null) {
   revalidatePath("/marketplace");
@@ -108,6 +119,21 @@ export async function createBuyNowOrderAction(
   }
 
   const viewer = await requireUser(`/marketplace/${parsed.data.slug}`);
+  const buyerEmail = viewer.user.email || viewer.profile?.email;
+
+  if (!buyerEmail) {
+    return {
+      message: "Your account is missing an email address. Add it before starting payment.",
+    };
+  }
+
+  if (!isStripeConfigured()) {
+    return {
+      message:
+        "Checkout is not configured yet. Add the production payment keys before taking payment.",
+    };
+  }
+
   const supabase = await createClient();
   await runMarketplaceMaintenance(supabase);
 
@@ -122,34 +148,27 @@ export async function createBuyNowOrderAction(
   await deliverPendingNotificationEmails();
   revalidateMarketplacePaths(parsed.data.slug, `/marketplace/${parsed.data.slug}`);
 
-  if (isStripeConfigured()) {
-    const { data: orderRow } = await supabase
-      .from("orders")
-      .select(
-        "id, kind, status, amount_pence, listings(id, slug, title), buyer_profile_id",
-      )
-      .eq("listing_id", parsed.data.listingId)
-      .eq("buyer_profile_id", viewer.user.id)
-      .eq("status", "awaiting_payment")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  const { data: orderRow } = await supabase
+    .from("orders")
+    .select(
+      "id, kind, status, amount_pence, listings!orders_listing_id_fkey(id, slug, title), buyer_profile_id",
+    )
+    .eq("listing_id", parsed.data.listingId)
+    .eq("buyer_profile_id", viewer.user.id)
+    .eq("status", "awaiting_payment")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-    if (orderRow) {
-      const buyerEmail = viewer.user.email || viewer.profile?.email;
+  if (orderRow) {
+    const listing = Array.isArray(orderRow.listings)
+      ? orderRow.listings[0]
+      : orderRow.listings;
 
-      if (!buyerEmail) {
-        return {
-          success: true,
-          message:
-            "Order created. Add an email address to the account before starting online payment.",
-        };
-      }
+    let session: Awaited<ReturnType<typeof createOrderCheckoutSession>>;
 
-      const listing = Array.isArray(orderRow.listings)
-        ? orderRow.listings[0]
-        : orderRow.listings;
-      const session = await createOrderCheckoutSession({
+    try {
+      session = await createOrderCheckoutSession({
         id: orderRow.id,
         amountPence: orderRow.amount_pence,
         kind: orderRow.kind,
@@ -157,17 +176,37 @@ export async function createBuyNowOrderAction(
         listingTitle: listing?.title ?? null,
         listingSlug: listing?.slug ?? parsed.data.slug,
         buyerEmail,
+        cancelPath: `/checkout/cancel?listing=${encodeURIComponent(parsed.data.slug)}`,
       });
+    } catch (error) {
+      console.error("Failed to create Stripe checkout session", error);
+      await supabase.rpc("cancel_buy_now_checkout", {
+        p_order_id: orderRow.id,
+      });
+      revalidateMarketplacePaths(parsed.data.slug, `/marketplace/${parsed.data.slug}`);
+      await deliverPendingNotificationEmails();
 
-      if (session.url) {
-        redirect(session.url);
-      }
+      return {
+        message: "Could not open checkout right now. Please try again in a moment.",
+      };
     }
+
+    if (session.url) {
+      redirect(session.url);
+    }
+
+    await supabase.rpc("cancel_buy_now_checkout", {
+      p_order_id: orderRow.id,
+    });
+    revalidateMarketplacePaths(parsed.data.slug, `/marketplace/${parsed.data.slug}`);
+    await deliverPendingNotificationEmails();
+
+    return { message: "Checkout could not be opened right now." };
   }
 
   return {
-    success: true,
-    message: "Order created. Payment is now tracked in your account.",
+    message:
+      "The order was created, but checkout could not be opened. Open your account and retry payment there.",
   };
 }
 
@@ -185,7 +224,7 @@ export async function startOrderCheckoutAction(
   if (!isStripeConfigured()) {
     return {
       message:
-        "Stripe checkout is not configured yet. The order stays visible in your account until payment keys are added.",
+        "Checkout is not configured yet. The order stays visible in your account until payment keys are added.",
     };
   }
 
@@ -202,7 +241,7 @@ export async function startOrderCheckoutAction(
   const { data: orderRow, error } = await supabase
     .from("orders")
     .select(
-      "id, kind, status, amount_pence, buyer_profile_id, listings(id, slug, title)",
+      "id, kind, status, amount_pence, buyer_profile_id, listings!orders_listing_id_fkey(id, slug, title)",
     )
     .eq("id", parsed.data.orderId)
     .eq("buyer_profile_id", viewer.user.id)
@@ -216,7 +255,9 @@ export async function startOrderCheckoutAction(
     return { message: "This order is no longer waiting for payment." };
   }
 
-  if (!viewer.user.email) {
+  const buyerEmail = viewer.user.email || viewer.profile?.email;
+
+  if (!buyerEmail) {
     return { message: "Your account is missing an email address." };
   }
 
@@ -224,21 +265,102 @@ export async function startOrderCheckoutAction(
     ? orderRow.listings[0]
     : orderRow.listings;
 
-  const session = await createOrderCheckoutSession({
-    id: orderRow.id,
-    amountPence: orderRow.amount_pence,
-    kind: orderRow.kind,
-    listingId: listing?.id ?? "",
-    listingTitle: listing?.title ?? null,
-    listingSlug: listing?.slug ?? null,
-    buyerEmail: viewer.user.email,
-  });
+  let session: Awaited<ReturnType<typeof createOrderCheckoutSession>>;
+
+  try {
+    session = await createOrderCheckoutSession({
+      id: orderRow.id,
+      amountPence: orderRow.amount_pence,
+      kind: orderRow.kind,
+      listingId: listing?.id ?? "",
+      listingTitle: listing?.title ?? null,
+      listingSlug: listing?.slug ?? null,
+      buyerEmail,
+    });
+  } catch (error) {
+    console.error("Failed to create Stripe checkout session", error);
+    return {
+      message: "Could not open checkout right now. Please try again in a moment.",
+    };
+  }
 
   if (!session.url) {
-    return { message: "Stripe did not return a checkout URL." };
+    return { message: "Checkout could not be opened right now." };
   }
 
   redirect(session.url);
+}
+
+export async function cancelPendingBuyNowOrderAction(
+  _prevState: MarketplaceActionState,
+  formData: FormData,
+): Promise<MarketplaceActionState> {
+  if (!isSupabaseConfigured()) {
+    return {
+      message:
+        "Supabase is not configured yet. Add the environment variables before using checkout.",
+    };
+  }
+
+  const parsed = releaseOrderSchema.safeParse({
+    orderId: formData.get("orderId"),
+    listingSlug: formData.get("listingSlug"),
+    redirectPath: formData.get("redirectPath"),
+  });
+
+  if (!parsed.success) {
+    return { message: "Invalid order." };
+  }
+
+  const viewer = await requireUser(parsed.data.redirectPath || "/account");
+  const supabase = await createClient();
+  const { data: orderRow, error } = await supabase
+    .from("orders")
+    .select("id, kind, status, buyer_profile_id, listings!orders_listing_id_fkey(slug)")
+    .eq("id", parsed.data.orderId)
+    .maybeSingle();
+
+  if (error || !orderRow || orderRow.buyer_profile_id !== viewer.user.id) {
+    return { message: "Order not found." };
+  }
+
+  if (orderRow.kind !== "buy_now") {
+    return { message: "Only buy-now reservations can be released here." };
+  }
+
+  if (orderRow.status !== "awaiting_payment") {
+    return { message: "This order is no longer waiting for payment." };
+  }
+
+  const { error: cancelError, data } = await supabase.rpc("cancel_buy_now_checkout", {
+    p_order_id: parsed.data.orderId,
+  });
+
+  if (cancelError) {
+    return { message: cancelError.message };
+  }
+
+  const listingRelation = orderRow.listings as
+    | { slug: string | null }
+    | { slug: string | null }[]
+    | null
+    | undefined;
+  const releaseResult = Array.isArray(data) ? data[0] : data;
+  const listingSlug =
+    (releaseResult?.listing_slug as string | null | undefined) ||
+    (Array.isArray(listingRelation)
+      ? listingRelation[0]?.slug
+      : listingRelation?.slug) ||
+    parsed.data.listingSlug ||
+    null;
+
+  revalidateMarketplacePaths(listingSlug, parsed.data.redirectPath);
+  await deliverPendingNotificationEmails();
+
+  return {
+    success: true,
+    message: "Reservation released. The kitchen is live again.",
+  };
 }
 
 export async function markNotificationReadAction(formData: FormData) {
@@ -248,6 +370,7 @@ export async function markNotificationReadAction(formData: FormData) {
 
   const parsed = notificationSchema.safeParse({
     notificationId: formData.get("notificationId"),
+    redirectPath: formData.get("redirectPath"),
   });
 
   if (!parsed.success) {
@@ -264,14 +387,17 @@ export async function markNotificationReadAction(formData: FormData) {
     .eq("profile_id", viewer.user.id)
     .is("read_at", null);
 
-  revalidatePath("/account");
+  revalidatePath(normaliseNotificationRedirectPath(parsed.data.redirectPath));
 }
 
-export async function markAllNotificationsReadAction() {
+export async function markAllNotificationsReadAction(formData: FormData) {
   if (!isSupabaseConfigured()) {
     return;
   }
 
+  const redirectPath = normaliseNotificationRedirectPath(
+    String(formData.get("redirectPath") || ""),
+  );
   const viewer = await requireUser("/account");
   const supabase = await createClient();
 
@@ -281,5 +407,5 @@ export async function markAllNotificationsReadAction() {
     .eq("profile_id", viewer.user.id)
     .is("read_at", null);
 
-  revalidatePath("/account");
+  revalidatePath(redirectPath);
 }

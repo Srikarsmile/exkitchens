@@ -1,10 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/env";
 import type {
   AdminOrderRecord,
+  NotificationItem,
   AdminUserRecord,
   SellerOption,
 } from "@/lib/marketplace-shared";
+import { ADMIN_NOTIFICATION_KINDS } from "@/lib/marketplace-shared";
 import {
   mapListing,
   mapOrder,
@@ -80,7 +82,7 @@ export async function getAdminCounts(): Promise<AdminCounts> {
     };
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   await runMarketplaceMaintenance(supabase);
 
   const [
@@ -120,7 +122,7 @@ export async function getAdminListings(limit = 24) {
     return [] as AdminListingRecord[];
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   await runMarketplaceMaintenance(supabase);
 
   const { data, error } = await supabase
@@ -152,7 +154,7 @@ export async function getAdminUsers(limit = 60) {
     return [] as AdminUserRecord[];
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("profiles")
     .select(
@@ -185,7 +187,7 @@ export async function getSellerOptions() {
     return [] as SellerOption[];
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("id, full_name, email, role")
@@ -212,11 +214,11 @@ export async function getAdminOrders(limit = 24) {
     return [] as AdminOrderRecord[];
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, kind, status, amount_pence, due_at, payment_reference, payment_notes, created_at, listings(id, slug, title), buyer:profiles!orders_buyer_profile_id_fkey(full_name, email), seller:profiles!orders_seller_profile_id_fkey(full_name, email)",
+      "id, kind, status, amount_pence, due_at, payment_reference, payment_notes, created_at, listings!orders_listing_id_fkey(id, slug, title), buyer:profiles!orders_buyer_profile_id_fkey(full_name, email), seller:profiles!orders_seller_profile_id_fkey(full_name, email)",
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -238,4 +240,48 @@ export async function getAdminOrders(limit = 24) {
       sellerEmail: seller?.email ?? null,
     };
   });
+}
+
+type NotificationRow = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  data: Record<string, unknown> | null;
+  created_at: string;
+  read_at: string | null;
+};
+
+export async function getAdminNotifications(userId: string, limit = 20) {
+  if (!isSupabaseConfigured()) {
+    return [] as NotificationItem[];
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id, kind, title, body, entity_type, entity_id, data, created_at, read_at")
+    .eq("profile_id", userId)
+    .in("kind", [...ADMIN_NOTIFICATION_KINDS])
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) {
+    console.error("Failed to load admin notifications", error);
+    return [];
+  }
+
+  return (data as NotificationRow[]).map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    title: row.title,
+    body: row.body,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    data: row.data ?? {},
+    createdAt: row.created_at,
+    readAt: row.read_at,
+  }));
 }

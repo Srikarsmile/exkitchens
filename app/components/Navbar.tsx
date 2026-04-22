@@ -6,6 +6,9 @@ import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { AppRole } from "@/lib/marketplace-shared";
+import { isSupabaseConfigured } from "@/lib/env";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 const navLinks = [
   { label: "Marketplace", href: "/marketplace" },
@@ -18,9 +21,22 @@ interface NavbarProps {
   forceSolid?: boolean;
 }
 
+interface NavViewerState {
+  ready: boolean;
+  userEmail: string | null;
+  fullName: string | null;
+  role: AppRole | null;
+}
+
 export default function Navbar({ forceSolid = false }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [viewer, setViewer] = useState<NavViewerState>({
+    ready: !isSupabaseConfigured(),
+    userEmail: null,
+    fullName: null,
+    role: null,
+  });
   const pathname = usePathname();
 
   useEffect(() => {
@@ -29,7 +45,152 @@ export default function Navbar({ forceSolid = false }: NavbarProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      return;
+    }
+
+    const supabase = createSupabaseClient();
+    let active = true;
+
+    async function syncViewer() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!active) {
+        return;
+      }
+
+      if (!user) {
+        setViewer({
+          ready: true,
+          userEmail: null,
+          fullName: null,
+          role: null,
+        });
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!active) {
+        return;
+      }
+
+      setViewer({
+        ready: true,
+        userEmail: user.email ?? null,
+        fullName:
+          typeof profile?.full_name === "string" ? profile.full_name : null,
+        role: (profile?.role as AppRole | null | undefined) ?? null,
+      });
+    }
+
+    void syncViewer();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      void syncViewer();
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const isSolid = forceSolid || scrolled;
+  const loginHref = `/login?next=${encodeURIComponent(pathname || "/marketplace")}`;
+  const accountLabel =
+    viewer.fullName?.split(" ")[0] || viewer.userEmail?.split("@")[0] || "Account";
+  const desktopButtonClass = `rounded-full px-4 py-2 text-[13px] font-medium tracking-wide transition-colors ${
+    isSolid
+      ? "bg-[#1a1a1a] text-white hover:bg-[#2b2b2b]"
+      : "bg-white/10 text-white hover:bg-white hover:text-[#1a1a1a]"
+  }`;
+  const desktopSecondaryButtonClass = `rounded-full px-4 py-2 text-[13px] font-medium tracking-wide transition-colors ${
+    isSolid
+      ? "border border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900"
+      : "border border-white/20 text-white/82 hover:border-white hover:text-white"
+  }`;
+
+  function renderDesktopAuth() {
+    if (!viewer.ready) {
+      return (
+        <div
+          className={`h-10 w-28 rounded-full ${
+            isSolid ? "bg-gray-100" : "bg-white/10"
+          } animate-pulse`}
+        />
+      );
+    }
+
+    if (!viewer.userEmail) {
+      return (
+        <Link href={loginHref} className={desktopButtonClass}>
+          Sign In
+        </Link>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-3">
+        {viewer.role === "admin" ? (
+          <Link href="/admin" className={desktopSecondaryButtonClass}>
+            Admin
+          </Link>
+        ) : null}
+        <Link href="/account" className={desktopButtonClass}>
+          {accountLabel}
+        </Link>
+      </div>
+    );
+  }
+
+  function renderMobileAuth() {
+    if (!viewer.ready) {
+      return <div className="mt-8 h-12 rounded-full bg-gray-100 animate-pulse" />;
+    }
+
+    if (!viewer.userEmail) {
+      return (
+        <Link
+          href={loginHref}
+          onClick={() => setMobileOpen(false)}
+          className="mt-8 px-6 py-3.5 rounded-full bg-[#1a1a1a] text-white text-center font-medium hover:bg-[#333] transition-colors"
+        >
+          Sign In
+        </Link>
+      );
+    }
+
+    return (
+      <div className="mt-8 space-y-3">
+        {viewer.role === "admin" ? (
+          <Link
+            href="/admin"
+            onClick={() => setMobileOpen(false)}
+            className="block px-6 py-3.5 rounded-full border border-gray-200 text-center font-medium text-gray-700 transition-colors hover:border-gray-300 hover:text-gray-900"
+          >
+            Admin
+          </Link>
+        ) : null}
+        <Link
+          href="/account"
+          onClick={() => setMobileOpen(false)}
+          className="block px-6 py-3.5 rounded-full bg-[#1a1a1a] text-white text-center font-medium hover:bg-[#333] transition-colors"
+        >
+          {accountLabel}
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -91,16 +252,7 @@ export default function Navbar({ forceSolid = false }: NavbarProps) {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/login"
-            className={`rounded-full px-4 py-2 text-[13px] font-medium tracking-wide transition-colors ${
-              isSolid
-                ? "bg-[#1a1a1a] text-white hover:bg-[#2b2b2b]"
-                : "bg-white/10 text-white hover:bg-white hover:text-[#1a1a1a]"
-            }`}
-          >
-            Sign In
-          </Link>
+          {renderDesktopAuth()}
         </div>
 
         {/* Mobile Menu Button */}
@@ -165,13 +317,7 @@ export default function Navbar({ forceSolid = false }: NavbarProps) {
                   </motion.div>
                 ))}
               </div>
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="mt-8 px-6 py-3.5 rounded-full bg-[#1a1a1a] text-white text-center font-medium hover:bg-[#333] transition-colors"
-              >
-                Sign In
-              </Link>
+              {renderMobileAuth()}
             </motion.div>
           </>
         )}

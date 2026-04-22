@@ -35,7 +35,7 @@ export default function AuthPageShell({
       <main id="main-content" className="pt-20">
         <section className="relative min-h-[360px] overflow-hidden bg-[#111111]">
           <Image
-            src="/assets/kitchen_nano_ultrawide_2.png"
+            src="/assets/kitchen_nano_ultrawide_2.jpg"
             alt="Ex Kitchens account access"
             fill
             sizes="100vw"

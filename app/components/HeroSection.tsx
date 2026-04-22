@@ -38,7 +38,7 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
         style={{ scale: imageScale }}
       >
         <Image
-          src="/assets/kitchen_nano_ultrawide_1.png"
+          src="/assets/kitchen_nano_ultrawide_1.jpg"
           alt="Luxury Ex-Display Kitchen"
           fill
           sizes="100vw"

@@ -2,11 +2,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import CancelReservationButton from "@/app/account/CancelReservationButton";
+import OrderCheckoutButton from "@/app/account/OrderCheckoutButton";
 import BidForm from "@/app/marketplace/[slug]/BidForm";
 import BuyNowCard from "@/app/marketplace/[slug]/BuyNowCard";
 import RealtimeRefresh from "@/app/components/RealtimeRefresh";
 import { toggleWatchlistAction } from "@/app/actions/marketplace";
 import { getViewer } from "@/lib/auth";
+import {
+  getMarketplaceSupportPhone,
+  getMarketplaceSupportPhoneHref,
+} from "@/lib/env";
 import { getListingBySlug } from "@/lib/marketplace";
 import {
   formatDateTime,
@@ -16,6 +22,7 @@ import {
 
 interface ListingPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 function withImageVersion(url: string) {
@@ -23,9 +30,17 @@ function withImageVersion(url: string) {
   return `${url}${separator}v=20260419`;
 }
 
-export default async function ListingPage({ params }: ListingPageProps) {
-  const { slug } = await params;
-  const viewer = await getViewer();
+export default async function ListingPage({
+  params,
+  searchParams,
+}: ListingPageProps) {
+  const [{ slug }, resolvedSearchParams, viewer] = await Promise.all([
+    params,
+    searchParams,
+    getViewer(),
+  ]);
+  const supportPhone = getMarketplaceSupportPhone();
+  const supportPhoneHref = getMarketplaceSupportPhoneHref();
   const { listing, bids } = await getListingBySlug(slug, viewer.user?.id);
 
   if (!listing) {
@@ -33,18 +48,31 @@ export default async function ListingPage({ params }: ListingPageProps) {
   }
 
   const heroImage = withImageVersion(
-    listing.heroImageUrl || "/assets/kitchen_nano_square.png",
+    listing.heroImageUrl || "/assets/kitchen_nano_square.jpg",
   );
   const galleryImages = listing.galleryUrls
     .filter((imageUrl) => !imageUrl.includes("IMG_1809.jpg") && !imageUrl.includes("IMG_1692.JPG"))
     .map(withImageVersion);
-  const canTransact =
+  const canBid =
     Boolean(viewer.user) &&
     (viewer.profile?.role === "admin" || viewer.profile?.bidder_status === "approved");
   const isLiveAuction =
     listing.saleType === "auction" && listing.auction?.status === "live";
   const buyNowAvailable =
     listing.saleType === "buy_now" && listing.status === "published" && !listing.order;
+  const ownsListing = Boolean(
+    viewer.user && listing.sellerProfileId && viewer.user.id === listing.sellerProfileId,
+  );
+  const paymentState =
+    typeof resolvedSearchParams.payment === "string"
+      ? resolvedSearchParams.payment
+      : null;
+  const viewerOwnsOrder = Boolean(
+    viewer.user &&
+      listing.order &&
+      listing.winnerProfileId &&
+      viewer.user.id === listing.winnerProfileId,
+  );
 
   return (
     <main id="main-content" className="mx-auto w-full max-w-7xl px-6 py-12">
@@ -207,32 +235,63 @@ export default async function ListingPage({ params }: ListingPageProps) {
           </section>
 
           <aside className="space-y-6 lg:sticky lg:top-24">
+            {paymentState === "cancel" ? (
+              <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
+                <h2 className="text-xl font-medium text-amber-900">
+                  Checkout cancelled
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-amber-800">
+                  Checkout was cancelled. You can try again, finish payment from
+                  your account, or release the reservation if you no longer want
+                  the kitchen.
+                </p>
+              </div>
+            ) : null}
+
             {listing.order ? (
               <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-xl font-medium text-gray-900">Settlement</h2>
+                <h2 className="text-xl font-medium text-gray-900">
+                  {viewerOwnsOrder ? "Complete your payment" : "Settlement"}
+                </h2>
                 <p className="mt-3 text-sm leading-6 text-gray-500">
-                  Status {listing.order.status.replaceAll("_", " ")}. Payment due{" "}
-                  {formatDateTime(listing.order.dueAt)}.
+                  {viewerOwnsOrder && listing.order.status === "awaiting_payment"
+                    ? `This kitchen is reserved in your account while payment is pending. Payment is due ${formatDateTime(listing.order.dueAt)}.`
+                    : `Status ${listing.order.status.replaceAll("_", " ")}. Payment due ${formatDateTime(listing.order.dueAt)}.`}
                 </p>
                 {listing.order.paymentReference ? (
                   <p className="mt-3 text-sm text-gray-600">
                     Reference {listing.order.paymentReference}
                   </p>
                 ) : null}
-                {viewer.user ? (
-                  <div className="mt-5">
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {viewerOwnsOrder && listing.order.status === "awaiting_payment" ? (
+                    <OrderCheckoutButton
+                      orderId={listing.order.id}
+                      className="space-y-3"
+                    />
+                  ) : null}
+                  {viewerOwnsOrder &&
+                  listing.order.kind === "buy_now" &&
+                  listing.order.status === "awaiting_payment" ? (
+                    <CancelReservationButton
+                      orderId={listing.order.id}
+                      listingSlug={listing.slug}
+                      redirectPath={`/marketplace/${listing.slug}`}
+                    />
+                  ) : null}
+                  {viewer.user ? (
                     <Link
                       href="/account"
                       className="rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
                     >
                       Open account
                     </Link>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
             ) : isLiveAuction && listing.auction ? (
               viewer.user ? (
-                canTransact ? (
+                canBid ? (
                   <BidForm
                     auctionId={listing.auction.id}
                     slug={listing.slug}
@@ -276,36 +335,45 @@ export default async function ListingPage({ params }: ListingPageProps) {
               )
             ) : buyNowAvailable ? (
               viewer.user ? (
-                canTransact ? (
+                ownsListing ? (
+                  <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
+                    <h2 className="text-xl font-medium text-gray-900">
+                      Seller view
+                    </h2>
+                    <p className="mt-3 text-sm leading-6 text-gray-500">
+                      You cannot purchase your own listing. Buyer checkout opens on
+                      this page for signed-in customers.
+                    </p>
+                  </div>
+                ) : (
                   <BuyNowCard
                     listingId={listing.id}
                     slug={listing.slug}
                     amountPence={listing.buyNowPricePence}
+                    supportPhone={supportPhone}
+                    supportPhoneHref={supportPhoneHref}
                   />
-                ) : (
-                  <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-                    <h2 className="text-xl font-medium text-amber-900">
-                      Approval required
-                    </h2>
-                    <p className="mt-3 text-sm leading-6 text-amber-800">
-                      Buy-now checkout opens after the bidder profile is approved.
-                    </p>
-                  </div>
                 )
               ) : (
                 <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-xl font-medium text-gray-900">Sign in to buy</h2>
+                  <h2 className="text-xl font-medium text-gray-900">Sign in to buy now</h2>
                   <p className="mt-3 text-sm leading-6 text-gray-500">
-                    Create an account to reserve this kitchen and keep the order in
-                    your account.
+                    Sign in to reserve this kitchen straight away and keep the order
+                    in your account.
                   </p>
-                  <div className="mt-5">
+                  <div className="mt-5 space-y-3">
                     <Link
                       href={`/login?next=${encodeURIComponent(`/marketplace/${listing.slug}`)}`}
                       className="rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
                     >
-                      Sign in
+                      Sign in to buy now
                     </Link>
+                    <a
+                      href={supportPhoneHref}
+                      className="inline-flex items-center justify-center rounded-full border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
+                    >
+                      Call us on {supportPhone}
+                    </a>
                   </div>
                 </div>
               )
@@ -319,7 +387,9 @@ export default async function ListingPage({ params }: ListingPageProps) {
                     ? listing.auction
                       ? `${listing.auction.status[0].toUpperCase()}${listing.auction.status.slice(1)}. Starts ${formatDateTime(listing.auction.startAt)} and ends ${formatDateTime(listing.auction.endAt)}.`
                       : "This auction is not currently available."
-                    : "This listing is already reserved or no longer available."}
+                    : listing.status === "sold" && listing.settlementOrderId
+                      ? "This kitchen is currently in checkout and temporarily unavailable."
+                      : "This listing is already reserved or no longer available."}
                 </p>
               </div>
             )}

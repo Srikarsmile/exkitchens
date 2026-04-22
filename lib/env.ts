@@ -4,6 +4,10 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 const resendApiKey = process.env.RESEND_API_KEY;
+const marketplaceSupportPhone =
+  process.env.NEXT_PUBLIC_MARKETPLACE_SUPPORT_PHONE ||
+  process.env.MARKETPLACE_SUPPORT_PHONE ||
+  "020 3996 2398";
 
 function normaliseUrl(input?: string | null) {
   if (!input) {
@@ -95,6 +99,30 @@ export function getMarketplaceEmailFrom() {
 
 export function getMarketplaceCronSecret() {
   return process.env.MARKETPLACE_CRON_SECRET || "";
+}
+
+export function getMarketplaceSupportPhone() {
+  return marketplaceSupportPhone;
+}
+
+export function getMarketplaceSupportPhoneHref() {
+  const trimmed = marketplaceSupportPhone.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  const digits = trimmed.replace(/[^\d+]/g, "");
+
+  if (digits.startsWith("+")) {
+    return `tel:${digits}`;
+  }
+
+  if (digits.startsWith("0")) {
+    return `tel:+44${digits.slice(1)}`;
+  }
+
+  return `tel:${digits}`;
 }
 
 export function getSiteUrl(origin?: string | null) {

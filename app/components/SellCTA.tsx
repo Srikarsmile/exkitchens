@@ -15,7 +15,7 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
   const imageFallback = (
     <div className="relative w-full h-full min-h-[400px] rounded-2xl overflow-hidden">
       <Image
-        src="/assets/kitchen_nano_landscape.png"
+        src="/assets/kitchen_nano_landscape.jpg"
         alt="Sell your kitchen"
         fill
         sizes="(max-width: 1024px) 100vw, 50vw"

@@ -1133,10 +1133,6 @@ begin
     raise exception ''Your profile could not be loaded.''\073
   end if\073
 
-  if v_profile.role <> ''admin'' and v_profile.bidder_status <> ''approved'' then
-    raise exception ''Your account is still waiting for bidder approval.''\073
-  end if\073
-
   select *
   into v_listing
   from public.listings

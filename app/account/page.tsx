@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CancelReservationButton from "@/app/account/CancelReservationButton";
 import OrderCheckoutButton from "@/app/account/OrderCheckoutButton";
 import SignOutButton from "@/app/account/SignOutButton";
 import RealtimeRefresh from "@/app/components/RealtimeRefresh";
@@ -22,17 +23,22 @@ interface AccountPageProps {
 }
 
 export default async function AccountPage({ searchParams }: AccountPageProps) {
-  const params = await searchParams;
-  const { user, profile } = await requireUser("/account");
+  const [params, { user, profile }] = await Promise.all([
+    searchParams,
+    requireUser("/account"),
+  ]);
   const email = user?.email ?? profile?.email ?? "Unknown account";
   const dashboard = await getAccountDashboard(user.id, profile?.role || "buyer");
   const unreadNotifications = dashboard.notifications.filter((item) => !item.readAt).length;
   const paymentState =
     typeof params.payment === "string" ? params.payment : null;
   const passwordUpdated = params.passwordUpdated === "1";
+  const activeOrderCount = [...dashboard.buyerOrders, ...dashboard.sellerOrders].filter(
+    (order) => !["cancelled", "refunded"].includes(order.status),
+  ).length;
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-20">
+    <main id="main-content" className="mx-auto w-full max-w-7xl px-6 py-12">
       <RealtimeRefresh
         channel={`account-${user.id}`}
         pollMs={60000}
@@ -119,10 +125,10 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           </p>
           <p className="mt-2 text-sm leading-6 text-gray-500">
             {profile?.bidder_status === "approved"
-              ? "You can join live auctions and start buy-now checkout."
+              ? "You can join live auctions and complete buy-now checkout."
               : profile?.bidder_status === "rejected"
                 ? "An admin needs to review your account before bidding is re-enabled."
-                : "An admin needs to approve the profile before bidding goes live."}
+                : "Buy-now checkout is available once you sign in. Auction bidding goes live after admin approval."}
           </p>
         </div>
         <div className="rounded-[2rem] bg-white p-6 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
@@ -137,10 +143,10 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         <div className="rounded-[2rem] bg-white p-6 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
           <p className="text-sm text-gray-500">Orders</p>
           <p className="mt-3 text-2xl font-medium text-gray-900">
-            {dashboard.buyerOrders.length + dashboard.sellerOrders.length}
+            {activeOrderCount}
           </p>
           <p className="mt-2 text-sm leading-6 text-gray-500">
-            Auction wins and buy-now reservations stay visible until they are
+            Active auction wins and buy-now reservations stay visible until they are
             fulfilled.
           </p>
         </div>
@@ -149,13 +155,15 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       <section className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-medium text-gray-900">Notifications</h2>
+            <h2 className="text-2xl font-medium text-gray-900">Your notifications</h2>
             <p className="mt-2 text-sm text-gray-500">
-              Outbid alerts, approval changes, and settlement updates land here.
+              Personal buyer and seller updates land here. Admin activity stays on the
+              admin dashboard.
             </p>
           </div>
           {unreadNotifications > 0 ? (
             <form action={markAllNotificationsReadAction}>
+              <input type="hidden" name="redirectPath" value="/account" />
               <button
                 type="submit"
                 className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
@@ -196,6 +204,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                         name="notificationId"
                         value={notification.id}
                       />
+                      <input type="hidden" name="redirectPath" value="/account" />
                       <button
                         type="submit"
                         className="rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
@@ -247,7 +256,19 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                     </p>
                   ) : null}
                   {order.status === "awaiting_payment" ? (
-                    <OrderCheckoutButton orderId={order.id} />
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <OrderCheckoutButton
+                        orderId={order.id}
+                        className="space-y-3"
+                      />
+                      {order.kind === "buy_now" ? (
+                        <CancelReservationButton
+                          orderId={order.id}
+                          listingSlug={order.listingSlug}
+                          redirectPath="/account"
+                        />
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               ))

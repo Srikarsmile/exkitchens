@@ -27,6 +27,8 @@ export interface CheckoutOrderDetails {
   listingTitle: string | null;
   listingSlug: string | null;
   buyerEmail: string;
+  successPath?: string | null;
+  cancelPath?: string | null;
 }
 
 export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
@@ -37,6 +39,8 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
   const stripe = getStripeClient();
   const siteUrl = getSiteUrl();
   const listingName = order.listingTitle || "Ex Kitchens order";
+  const successPath = order.successPath || "/account?payment=success";
+  const cancelPath = order.cancelPath || "/account?payment=cancel";
 
   return stripe.checkout.sessions.create({
     mode: "payment",
@@ -62,8 +66,8 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
         },
       },
     ],
-    success_url: `${siteUrl}/account?payment=success&order=${encodeURIComponent(order.id)}`,
-    cancel_url: `${siteUrl}/account?payment=cancel&order=${encodeURIComponent(order.id)}`,
+    success_url: `${siteUrl}${successPath}`,
+    cancel_url: `${siteUrl}${cancelPath}`,
   });
 }
 

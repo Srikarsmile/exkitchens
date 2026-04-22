@@ -48,7 +48,7 @@ export default async function MarketplacePage() {
       <section className="relative overflow-hidden rounded-[2rem] bg-[#111111]">
         <div className="absolute inset-0">
           <Image
-            src="/assets/kitchen_nano_ultrawide_2.png"
+            src="/assets/kitchen_nano_ultrawide_2.jpg"
             alt="Ex-display kitchen showroom"
             fill
             sizes="100vw"
@@ -131,7 +131,7 @@ export default async function MarketplacePage() {
             >
               <div className="relative h-72 bg-[#f3f3f3]">
                 <Image
-                  src={listing.heroImageUrl || "/assets/kitchen_nano_square.png"}
+                  src={listing.heroImageUrl || "/assets/kitchen_nano_square.jpg"}
                   alt={listing.title}
                   fill
                   sizes="(max-width: 1024px) 100vw, 33vw"

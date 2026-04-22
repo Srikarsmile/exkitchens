@@ -1,5 +1,4 @@
 import Link from "next/link";
-import AdminCreateListingForm from "@/app/admin/AdminCreateListingForm";
 import {
   cancelAuctionAction,
   closeAuctionAction,
@@ -7,13 +6,17 @@ import {
   updateOrderStatusAction,
   updateUserAccessAction,
 } from "@/app/actions/admin";
+import {
+  markAllNotificationsReadAction,
+  markNotificationReadAction,
+} from "@/app/actions/marketplace";
 import { requireAdmin } from "@/lib/auth";
 import {
   getAdminCounts,
   getAdminListings,
+  getAdminNotifications,
   getAdminOrders,
   getAdminUsers,
-  getSellerOptions,
 } from "@/lib/admin";
 import {
   formatBidderStatus,
@@ -24,31 +27,38 @@ import {
 } from "@/lib/marketplace-shared";
 
 export default async function AdminPage() {
-  await requireAdmin("/admin");
-  const [counts, listings, users, orders, sellerOptions] = await Promise.all([
+  const viewer = await requireAdmin("/admin");
+  const [counts, listings, users, orders, notifications] = await Promise.all([
     getAdminCounts(),
     getAdminListings(),
     getAdminUsers(),
     getAdminOrders(),
-    getSellerOptions(),
+    getAdminNotifications(viewer.user.id),
   ]);
+  const unreadAdminNotifications = notifications.filter((item) => !item.readAt).length;
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-16">
+    <main id="main-content" className="mx-auto w-full max-w-7xl px-6 py-12">
       <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#3d7a44]">
             Admin
           </p>
           <h1 className="mt-3 text-4xl font-light tracking-tight text-gray-900">
-            Marketplace operations
+            Marketplace control room
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-500">
-            Review bidders, publish stock, close auctions, and keep settlement
-            moving.
+            Keep the workflow simple: add stock, approve buyers, track payments,
+            and intervene on auctions from one page.
           </p>
         </div>
         <div className="flex gap-3">
+          <Link
+            href="/admin/listings/new"
+            className="rounded-full bg-[#3d7a44] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2f6135]"
+          >
+            Add new listing
+          </Link>
           <Link
             href="/account"
             className="rounded-full border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
@@ -82,23 +92,161 @@ export default async function AdminPage() {
         ))}
       </section>
 
-      <section className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
-        <h2 className="text-2xl font-medium text-gray-900">Create listing</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-          Add the gallery, set reserve pricing, and attach a seller profile from
-          the same flow.
-        </p>
-        <div className="mt-8">
-          <AdminCreateListingForm sellerOptions={sellerOptions} />
-        </div>
+      <section className="mt-10 grid gap-4 md:grid-cols-4">
+        {[
+          {
+            title: "Add stock",
+            body: "Open the dedicated listing form, paste media URLs, set prices, and publish.",
+            href: "/admin/listings/new",
+            label: "New listing",
+          },
+          {
+            title: "Approve bidders",
+            body: "Review buyer accounts, phone verification, and bidder status in one table.",
+            href: "#approvals",
+            label: "Open approvals",
+          },
+          {
+            title: "Track payments",
+            body: "Move orders from awaiting payment through paid, fulfilled, cancelled, or refunded.",
+            href: "#orders",
+            label: "Open orders",
+          },
+          {
+            title: "Manage live stock",
+            body: "Pause listings, close auctions early, or archive listings that should leave the marketplace.",
+            href: "#listings",
+            label: "Open listings",
+          },
+        ].map((item) => (
+          <div
+            key={item.title}
+            className="rounded-[2rem] bg-white p-6 shadow-[0_20px_40px_rgba(17,17,17,0.05)]"
+          >
+            <h2 className="text-lg font-medium text-gray-900">{item.title}</h2>
+            <p className="mt-3 text-sm leading-6 text-gray-500">{item.body}</p>
+            <Link
+              href={item.href}
+              className="mt-6 inline-flex rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
+            >
+              {item.label}
+            </Link>
+          </div>
+        ))}
       </section>
 
       <section className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
         <div className="flex items-center justify-between gap-4">
           <div>
+            <h2 className="text-2xl font-medium text-gray-900">Admin activity</h2>
+            <p className="mt-2 text-sm text-gray-500">
+              Internal marketplace events such as new order creation land here, not
+              in the buyer account feed.
+            </p>
+          </div>
+          {unreadAdminNotifications > 0 ? (
+            <form action={markAllNotificationsReadAction}>
+              <input type="hidden" name="redirectPath" value="/admin" />
+              <button
+                type="submit"
+                className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
+              >
+                Mark all read
+              </button>
+            </form>
+          ) : null}
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {notifications.length === 0 ? (
+            <p className="text-sm text-gray-500">No admin activity yet.</p>
+          ) : (
+            notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`rounded-2xl border px-4 py-4 ${
+                  notification.readAt
+                    ? "border-gray-200 bg-[#fafafa]"
+                    : "border-green-200 bg-green-50/60"
+                }`}
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">{notification.title}</p>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      {notification.body}
+                    </p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-400">
+                      {formatDateTime(notification.createdAt)}
+                    </p>
+                  </div>
+                  {!notification.readAt ? (
+                    <form action={markNotificationReadAction}>
+                      <input
+                        type="hidden"
+                        name="notificationId"
+                        value={notification.id}
+                      />
+                      <input type="hidden" name="redirectPath" value="/admin" />
+                      <button
+                        type="submit"
+                        className="rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
+                      >
+                        Mark read
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-medium text-gray-900">Listing intake</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
+              New listings now have their own page so the dashboard stays easier to
+              scan. Use the listing form when you want to publish a new kitchen,
+              then come back here to manage status and auctions.
+            </p>
+          </div>
+          <Link
+            href="/admin/listings/new"
+            className="inline-flex rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
+          >
+            Open listing form
+          </Link>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            "Create the title, summary, description, and seller assignment.",
+            "Paste the hero image URL and gallery image URLs in one place.",
+            "Set auction timing with normal date and time inputs instead of raw ISO strings.",
+          ].map((point) => (
+            <div
+              key={point}
+              className="rounded-2xl border border-gray-200 px-5 py-4 text-sm leading-6 text-gray-600"
+            >
+              {point}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section
+        id="approvals"
+        className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
             <h2 className="text-2xl font-medium text-gray-900">Bidder approvals</h2>
             <p className="mt-2 text-sm text-gray-500">
               Review roles, bidder access, and phone verification from one table.
+              Change access here when a buyer is ready to bid.
             </p>
           </div>
         </div>
@@ -206,13 +354,17 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      <section className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
+      <section
+        id="orders"
+        className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]"
+      >
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-medium text-gray-900">Orders</h2>
             <p className="mt-2 text-sm text-gray-500">
               Track auction wins and buy-now reservations until payment and
-              fulfilment are complete.
+              fulfilment are complete. This is the section to update after bank
+              transfer, collection, delivery, or refund.
             </p>
           </div>
         </div>
@@ -324,14 +476,25 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      <section className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
+      <section
+        id="listings"
+        className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]"
+      >
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-medium text-gray-900">Listings</h2>
             <p className="mt-2 text-sm text-gray-500">
               Control publication state and intervene on auctions when needed.
+              Published means visible on the marketplace, archived removes it, and
+              sold keeps the record closed.
             </p>
           </div>
+          <Link
+            href="/admin/listings/new"
+            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
+          >
+            Add listing
+          </Link>
         </div>
 
         <div className="mt-8 overflow-x-auto">

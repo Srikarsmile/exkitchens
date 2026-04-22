@@ -1,8 +1,4 @@
 import { Resend } from "resend";
-import AccountVerificationEmail from "@/emails/AccountVerificationEmail";
-import MarketplaceNotificationEmail from "@/emails/MarketplaceNotificationEmail";
-import PasswordResetEmail from "@/emails/PasswordResetEmail";
-import WelcomeEmail from "@/emails/WelcomeEmail";
 import {
   getMarketplaceEmailFrom,
   getResendEnv,
@@ -56,6 +52,79 @@ function getNotificationActionUrl(
   return `${getSiteUrl()}/account`;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function renderEmail({
+  preview,
+  heading,
+  recipientName,
+  body,
+  secondaryBody,
+  actionLabel,
+  actionUrl,
+}: {
+  preview: string;
+  heading: string;
+  recipientName?: string | null;
+  body: string;
+  secondaryBody?: string;
+  actionLabel?: string;
+  actionUrl?: string;
+}) {
+  const greeting = recipientName ? `Hi ${escapeHtml(recipientName)},` : "Hi,";
+  const button =
+    actionLabel && actionUrl
+      ? `
+        <div style="margin:32px 0 28px;">
+          <a href="${escapeHtml(actionUrl)}" style="display:inline-block;border-radius:999px;background:#111111;color:#ffffff;font-size:15px;font-weight:600;line-height:1;text-decoration:none;padding:16px 24px;">
+            ${escapeHtml(actionLabel)}
+          </a>
+        </div>
+      `
+      : "";
+  const secondary = secondaryBody
+    ? `<p style="color:#4b5563;font-size:15px;line-height:1.7;margin:14px 0 0;">${escapeHtml(secondaryBody)}</p>`
+    : "";
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>${escapeHtml(preview)}</title>
+      </head>
+      <body style="margin:0;background:#f3f5f3;font-family:Inter,Arial,sans-serif;color:#111111;">
+        <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(preview)}</div>
+        <div style="margin:0 auto;padding:32px 16px;max-width:640px;">
+          <div style="overflow:hidden;border-radius:24px;background:#ffffff;border:1px solid #dfe5df;">
+            <div style="padding:28px 32px 20px;border-bottom:1px solid #eef2ef;">
+              <div style="color:#3d7a44;font-size:13px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;">Ex Kitchens</div>
+              <h1 style="margin:18px 0 0;color:#111111;font-size:36px;font-weight:400;line-height:1.1;">${escapeHtml(heading)}</h1>
+            </div>
+            <div style="padding:28px 32px 32px;">
+              <p style="color:#111111;font-size:15px;line-height:1.7;margin:0 0 12px;">${greeting}</p>
+              <p style="color:#4b5563;font-size:15px;line-height:1.7;margin:0;">${escapeHtml(body)}</p>
+              ${secondary}
+              ${button}
+              <p style="color:#6b7280;font-size:13px;line-height:1.6;margin:32px 0 0;">
+                This message was sent by the Ex Kitchens marketplace.
+              </p>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
 interface AccountVerificationEmailInput {
   recipientEmail: string;
   recipientName?: string | null;
@@ -88,9 +157,15 @@ export async function sendAccountVerificationEmail({
     from: getMarketplaceEmailFrom(),
     to: recipientEmail,
     subject: "Confirm your Ex Kitchens account",
-    react: AccountVerificationEmail({
+    html: renderEmail({
+      preview: "Confirm your Ex Kitchens account",
+      heading: "Confirm your email address",
       recipientName,
-      verificationUrl,
+      body: "Finish your Ex Kitchens account setup so you can watch listings, join approval review, and bid when your profile is cleared.",
+      secondaryBody:
+        "This link is for your account only. If you did not create an account, you can ignore this email.",
+      actionLabel: "Verify email",
+      actionUrl: verificationUrl,
     }),
   });
 }
@@ -109,9 +184,15 @@ export async function sendWelcomeEmail({
     from: getMarketplaceEmailFrom(),
     to: recipientEmail,
     subject: "Welcome to Ex Kitchens",
-    react: WelcomeEmail({
+    html: renderEmail({
+      preview: "Welcome to Ex Kitchens",
+      heading: "Your Ex Kitchens account is ready",
       recipientName,
-      accountUrl: `${getSiteUrl()}/account`,
+      body: "Welcome in. Your email has been confirmed and your marketplace account is active.",
+      secondaryBody:
+        "Add any missing contact details, keep an eye on your watchlist, and wait for bidder approval before placing live bids.",
+      actionLabel: "Open your account",
+      actionUrl: `${getSiteUrl()}/account`,
     }),
   });
 }
@@ -131,9 +212,15 @@ export async function sendPasswordResetEmail({
     from: getMarketplaceEmailFrom(),
     to: recipientEmail,
     subject: "Reset your Ex Kitchens password",
-    react: PasswordResetEmail({
+    html: renderEmail({
+      preview: "Reset your Ex Kitchens password",
+      heading: "Reset your password",
       recipientName,
-      resetUrl,
+      body: "We received a request to reset the password for your Ex Kitchens account.",
+      secondaryBody:
+        "If this was you, use the button below to choose a new password. If not, you can ignore this email and your account will stay unchanged.",
+      actionLabel: "Reset password",
+      actionUrl: resetUrl,
     }),
   });
 }
@@ -180,11 +267,11 @@ export async function deliverPendingNotificationEmails(limit = 20) {
       from: getMarketplaceEmailFrom(),
       to: row.recipient_email,
       subject: row.title,
-      react: MarketplaceNotificationEmail({
+      html: renderEmail({
         preview: row.title,
         heading: row.title,
-        body: row.body,
         recipientName: row.recipient_name,
+        body: row.body,
         actionLabel: "Open marketplace",
         actionUrl,
       }),

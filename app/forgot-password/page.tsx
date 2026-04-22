@@ -3,8 +3,16 @@ import AuthPageShell from "@/app/components/AuthPageShell";
 import ForgotPasswordForm from "@/app/forgot-password/ForgotPasswordForm";
 import { getViewer } from "@/lib/auth";
 
-export default async function ForgotPasswordPage() {
+interface ForgotPasswordPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function ForgotPasswordPage({
+  searchParams,
+}: ForgotPasswordPageProps) {
+  const params = await searchParams;
   const viewer = await getViewer();
+  const confirmFailed = params.error === "confirm_failed";
 
   return (
     <AuthPageShell
@@ -27,6 +35,14 @@ export default async function ForgotPasswordPage() {
           >
             Back to account
           </Link>
+        ) : undefined
+      }
+      notices={
+        confirmFailed ? (
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            That reset link is invalid or has expired. Request a fresh password
+            reset email below.
+          </p>
         ) : undefined
       }
       asideTitle="Recovery should feel native to the site."

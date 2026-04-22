@@ -1,7 +1,6 @@
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { createPublicClient } from "@/lib/supabase/public";
-import { deliverPendingNotificationEmails } from "@/lib/email";
-import { isSupabaseConfigured } from "@/lib/env";
+import { isSupabaseAdminConfigured, isSupabaseConfigured } from "@/lib/env";
 import type {
   AuctionSnapshot,
   ListingCardData,
@@ -14,7 +13,9 @@ import type {
   PublicBidFeedItem,
 } from "@/lib/marketplace-shared";
 
-type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
+type MarketplaceDbClient =
+  | ReturnType<typeof createAdminClient>
+  | Awaited<ReturnType<typeof createClient>>;
 
 export type SupabaseListingRow = {
   id: string;
@@ -88,6 +89,11 @@ type PublicBidFeedRow = {
   created_at: string;
   is_current: boolean;
 };
+
+const MARKETPLACE_MAINTENANCE_THROTTLE_MS = 15_000;
+
+let marketplaceMaintenancePromise: Promise<void> | null = null;
+let lastMarketplaceMaintenanceAt = 0;
 
 function normaliseAuction(row: SupabaseListingRow) {
   const auction = Array.isArray(row.auctions) ? row.auctions[0] : row.auctions;
@@ -167,20 +173,43 @@ export function mapOrder(row: SupabaseOrderRow): OrderSummary {
   };
 }
 
-export async function runMarketplaceMaintenance(supabase?: ServerSupabase) {
+export async function runMarketplaceMaintenance(supabase?: MarketplaceDbClient) {
   if (!isSupabaseConfigured()) {
     return;
   }
 
-  const client = supabase ?? (await createClient());
-  const { error } = await client.rpc("sync_auction_states");
-
-  if (error) {
-    console.error("Failed to sync auction states", error);
+  if (marketplaceMaintenancePromise) {
+    await marketplaceMaintenancePromise;
     return;
   }
 
-  await deliverPendingNotificationEmails();
+  if (
+    lastMarketplaceMaintenanceAt > 0 &&
+    Date.now() - lastMarketplaceMaintenanceAt < MARKETPLACE_MAINTENANCE_THROTTLE_MS
+  ) {
+    return;
+  }
+
+  const client =
+    supabase ??
+    (isSupabaseAdminConfigured() ? createAdminClient() : await createClient());
+
+  marketplaceMaintenancePromise = (async () => {
+    const { error } = await client.rpc("sync_auction_states");
+
+    if (error) {
+      console.error("Failed to sync auction states", error);
+      return;
+    }
+
+    lastMarketplaceMaintenanceAt = Date.now();
+  })();
+
+  try {
+    await marketplaceMaintenancePromise;
+  } finally {
+    marketplaceMaintenancePromise = null;
+  }
 }
 
 export async function getFeaturedListings(limit = 6) {
@@ -188,7 +217,7 @@ export async function getFeaturedListings(limit = 6) {
     return [] as ListingCardData[];
   }
 
-  const supabase = createPublicClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("listings")
@@ -213,7 +242,7 @@ export async function getMarketplaceListings() {
     return [] as ListingCardData[];
   }
 
-  const supabase = createPublicClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("listings")
@@ -267,11 +296,16 @@ export async function getListingBySlug(slug: string, viewerId?: string | null) {
   const mappedListing = mapListing(data as SupabaseListingRow);
   let order: OrderSummary | null = null;
 
-  if (mappedListing.settlementOrderId && viewerId) {
+  if (
+    mappedListing.settlementOrderId &&
+    viewerId &&
+    (mappedListing.winnerProfileId === viewerId ||
+      mappedListing.sellerProfileId === viewerId)
+  ) {
     const { data: orderRow } = await supabase
       .from("orders")
       .select(
-        "id, kind, status, amount_pence, due_at, payment_reference, payment_notes, created_at, listings(id, slug, title)",
+        "id, kind, status, amount_pence, due_at, payment_reference, payment_notes, created_at, listings!orders_listing_id_fkey(id, slug, title)",
       )
       .eq("id", mappedListing.settlementOrderId)
       .maybeSingle();

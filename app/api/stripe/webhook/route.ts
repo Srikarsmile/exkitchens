@@ -6,6 +6,7 @@ import {
   isStripeConfigured,
   isSupabaseAdminConfigured,
 } from "@/lib/env";
+import { releasePendingBuyNowOrder } from "@/lib/orders";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripeWebhookClient } from "@/lib/stripe";
 
@@ -45,6 +46,12 @@ export async function POST(request: Request) {
     );
   }
 
+  if (event.type === "checkout.session.expired") {
+    await handleCheckoutExpired(
+      event.data.object as Stripe.Checkout.Session,
+    );
+  }
+
   return NextResponse.json({ received: true });
 }
 
@@ -62,7 +69,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     .eq("id", orderId)
     .maybeSingle();
 
-  if (!order || order.status === "paid" || order.status === "fulfilled") {
+  if (!order || order.status !== "awaiting_payment") {
     return;
   }
 
@@ -130,4 +137,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   await deliverPendingNotificationEmails();
+}
+
+async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
+  const orderId = session.metadata?.order_id;
+
+  if (!orderId) {
+    return;
+  }
+
+  await releasePendingBuyNowOrder({
+    orderId,
+    reason: "Stripe checkout session expired before payment completed.",
+  });
 }

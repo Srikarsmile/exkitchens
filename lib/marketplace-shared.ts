@@ -99,6 +99,14 @@ export interface NotificationItem {
   readAt: string | null;
 }
 
+export const ADMIN_NOTIFICATION_KINDS = ["order_created"] as const;
+
+export function isAdminNotificationKind(kind: string) {
+  return ADMIN_NOTIFICATION_KINDS.includes(
+    kind as (typeof ADMIN_NOTIFICATION_KINDS)[number],
+  );
+}
+
 export interface AccountDashboardData {
   bids: AccountBidItem[];
   watchlist: ListingCardData[];

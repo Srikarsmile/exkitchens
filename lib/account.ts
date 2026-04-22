@@ -1,11 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
+import { createClient } from "@/lib/supabase/server";
 import type {
   AccountBidItem,
   AccountDashboardData,
   AppRole,
   NotificationItem,
 } from "@/lib/marketplace-shared";
+import { isAdminNotificationKind } from "@/lib/marketplace-shared";
 import {
   mapListing,
   mapOrder,
@@ -114,7 +115,7 @@ export async function getAccountDashboard(
     supabase
       .from("orders")
       .select(
-        "id, kind, status, amount_pence, due_at, payment_reference, payment_notes, created_at, listings(id, slug, title)",
+        "id, kind, status, amount_pence, due_at, payment_reference, payment_notes, created_at, listings!orders_listing_id_fkey(id, slug, title)",
       )
       .eq("buyer_profile_id", userId)
       .order("created_at", { ascending: false })
@@ -123,7 +124,7 @@ export async function getAccountDashboard(
       ? supabase
           .from("orders")
           .select(
-            "id, kind, status, amount_pence, due_at, payment_reference, payment_notes, created_at, listings(id, slug, title)",
+            "id, kind, status, amount_pence, due_at, payment_reference, payment_notes, created_at, listings!orders_listing_id_fkey(id, slug, title)",
           )
           .eq("seller_profile_id", userId)
           .order("created_at", { ascending: false })
@@ -192,17 +193,19 @@ export async function getAccountDashboard(
       .filter((item): item is NonNullable<typeof item> => Boolean(item)) ?? [];
 
   const notifications: NotificationItem[] =
-    (notificationRows as NotificationRow[] | null)?.map((row) => ({
-      id: row.id,
-      kind: row.kind,
-      title: row.title,
-      body: row.body,
-      entityType: row.entity_type,
-      entityId: row.entity_id,
-      data: row.data ?? {},
-      createdAt: row.created_at,
-      readAt: row.read_at,
-    })) ?? [];
+    ((notificationRows as NotificationRow[] | null) ?? [])
+      .filter((row) => !isAdminNotificationKind(row.kind))
+      .map((row) => ({
+        id: row.id,
+        kind: row.kind,
+        title: row.title,
+        body: row.body,
+        entityType: row.entity_type,
+        entityId: row.entity_id,
+        data: row.data ?? {},
+        createdAt: row.created_at,
+        readAt: row.read_at,
+      }));
 
   return {
     bids,

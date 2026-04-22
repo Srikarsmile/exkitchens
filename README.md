@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ex Kitchens
 
-## Getting Started
+Ex Kitchens is a Next.js 16 marketplace for premium ex-display and pre-loved kitchens. It includes:
 
-First, run the development server:
+- public listing discovery and featured inventory
+- account signup, email verification, password reset, and bidder approval
+- live auctions with bid placement and settlement creation
+- buy-now checkout with Stripe hosted checkout
+- admin listing intake, approvals, order management, and notification delivery
+
+## Stack
+
+- Next.js 16 App Router
+- React 19
+- Supabase Auth, Postgres, Realtime, and Storage
+- Stripe Checkout + webhooks
+- Resend for branded account and notification emails
+
+## Environment
+
+Copy `.env.example` to `.env.local` and fill in the values.
+
+Required for auth and public marketplace use:
+
+- `NEXT_PUBLIC_SITE_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+Required for admin operations, storage uploads, webhook handling, and notification delivery:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Required for buy-now checkout and payment confirmation:
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+
+Required for branded auth emails and notification delivery:
+
+- `RESEND_API_KEY`
+- `MARKETPLACE_EMAIL_FROM`
+
+Optional operational secret:
+
+- `MARKETPLACE_CRON_SECRET`
+
+## Scripts
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run typecheck
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Database
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Apply the SQL files in `supabase/migrations/`. The marketplace logic depends on those migrations for:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- auction state transitions and settlement creation
+- buy-now reservation start and cancellation
+- notifications and email claim/delivery
+- row-level security for public, buyer, seller, and admin access
 
-## Learn More
+## Operational Notes
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Stripe must point its webhook to `/api/stripe/webhook`.
+- Hosted listing image URLs are intentionally restricted to Ex Kitchens or the configured Supabase storage host. Use the upload flow for everything else.
+- Auction date/time inputs are captured in the admin user’s local timezone and stored in UTC.
+- Buy-now cancellation is intentionally authenticated and no longer happens from a public GET route.

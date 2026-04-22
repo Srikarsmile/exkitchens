@@ -11,15 +11,17 @@ const initialState: MarketplaceActionState = {};
 
 interface OrderCheckoutButtonProps {
   orderId: string;
+  className?: string;
 }
 
 export default function OrderCheckoutButton({
   orderId,
+  className,
 }: OrderCheckoutButtonProps) {
   const [state, action] = useActionState(startOrderCheckoutAction, initialState);
 
   return (
-    <form action={action} className="mt-4 space-y-3">
+    <form action={action} className={className || "space-y-3"}>
       <input type="hidden" name="orderId" value={orderId} />
       {state.message ? (
         <p
