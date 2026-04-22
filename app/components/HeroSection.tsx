@@ -11,6 +11,9 @@ import Image from "next/image";
 import Link from "next/link";
 import SplineScene from "./SplineScene";
 import SplitText from "./SplitText";
+import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
+
+const heroBlurDataUrl = getShimmerBlurDataUrl(1600, 900);
 
 interface HeroSectionProps {
   splineUrl?: string | null;
@@ -42,6 +45,9 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
           alt="Luxury Ex-Display Kitchen"
           fill
           sizes="100vw"
+          quality={72}
+          placeholder="blur"
+          blurDataURL={heroBlurDataUrl}
           className="object-cover object-center pointer-events-none"
           priority
         />

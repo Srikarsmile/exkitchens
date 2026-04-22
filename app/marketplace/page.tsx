@@ -5,6 +5,10 @@ import { getViewer } from "@/lib/auth";
 import { getMarketplaceListings } from "@/lib/marketplace";
 import { formatMoney, formatTimeRemaining } from "@/lib/marketplace-shared";
 import { isSupabaseConfigured } from "@/lib/env";
+import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
+
+const heroBlurDataUrl = getShimmerBlurDataUrl(1600, 900);
+const cardBlurDataUrl = getShimmerBlurDataUrl(720, 540);
 
 function getListingBadge(listing: Awaited<ReturnType<typeof getMarketplaceListings>>[number]) {
   if (listing.saleType === "buy_now") {
@@ -52,6 +56,9 @@ export default async function MarketplacePage() {
             alt="Ex-display kitchen showroom"
             fill
             sizes="100vw"
+            quality={70}
+            placeholder="blur"
+            blurDataURL={heroBlurDataUrl}
             className="object-cover"
             priority
           />
@@ -135,6 +142,9 @@ export default async function MarketplacePage() {
                   alt={listing.title}
                   fill
                   sizes="(max-width: 1024px) 100vw, 33vw"
+                  quality={60}
+                  placeholder="blur"
+                  blurDataURL={cardBlurDataUrl}
                   className="object-cover"
                 />
                 <div className="absolute left-4 top-4 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">

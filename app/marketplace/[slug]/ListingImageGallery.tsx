@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
+import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
 
 interface ListingImageGalleryProps {
   title: string;
@@ -21,6 +22,13 @@ export default function ListingImageGallery({
   );
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const activeImageIndex = activeIndex ?? 0;
+  const inlineGalleryImages = galleryImages.slice(0, 4);
+  const remainingInlineImageCount = Math.max(
+    galleryImages.length - inlineGalleryImages.length,
+    0,
+  );
+  const heroBlurDataUrl = getShimmerBlurDataUrl(1600, 960);
+  const galleryBlurDataUrl = getShimmerBlurDataUrl(640, 480);
 
   useEffect(() => {
     if (activeIndex === null) {
@@ -80,6 +88,9 @@ export default function ListingImageGallery({
             fill
             priority
             sizes="100vw"
+            quality={70}
+            placeholder="blur"
+            blurDataURL={heroBlurDataUrl}
             className="object-cover transition duration-300 group-hover:scale-[1.02]"
           />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/50 via-black/10 to-transparent p-4 text-white">
@@ -93,25 +104,40 @@ export default function ListingImageGallery({
         </button>
 
         {galleryImages.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {galleryImages.map((imageUrl, index) => (
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {inlineGalleryImages.map((imageUrl, index) => (
+                <button
+                  key={imageUrl}
+                  type="button"
+                  onClick={() => setActiveIndex(index + 1)}
+                  className="group relative h-44 overflow-hidden rounded-2xl bg-[#f3f3f3] text-left"
+                  aria-label={`View gallery image ${index + 1} for ${title}`}
+                >
+                  <Image
+                    src={imageUrl}
+                    alt={`${title} gallery image ${index + 1}`}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                    quality={55}
+                    placeholder="blur"
+                    blurDataURL={galleryBlurDataUrl}
+                    className="object-cover transition duration-300 group-hover:scale-[1.03]"
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+                </button>
+              ))}
+            </div>
+
+            {remainingInlineImageCount > 0 ? (
               <button
-                key={imageUrl}
                 type="button"
-                onClick={() => setActiveIndex(index + 1)}
-                className="group relative h-44 overflow-hidden rounded-2xl bg-[#f3f3f3] text-left"
-                aria-label={`View gallery image ${index + 1} for ${title}`}
+                onClick={() => setActiveIndex(0)}
+                className="inline-flex items-center justify-center rounded-full border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
               >
-                <Image
-                  src={imageUrl}
-                  alt={`${title} gallery image ${index + 1}`}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                  className="object-cover transition duration-300 group-hover:scale-[1.03]"
-                />
-                <div className="pointer-events-none absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+                View all {images.length} photos
               </button>
-            ))}
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -152,6 +178,9 @@ export default function ListingImageGallery({
                   alt={`${title} enlarged image ${activeImageIndex + 1}`}
                   fill
                   sizes="100vw"
+                  quality={75}
+                  placeholder="blur"
+                  blurDataURL={heroBlurDataUrl}
                   className="object-contain"
                   priority
                 />
@@ -209,6 +238,9 @@ export default function ListingImageGallery({
                       alt={`${title} thumbnail ${index + 1}`}
                       fill
                       sizes="96px"
+                      quality={45}
+                      placeholder="blur"
+                      blurDataURL={galleryBlurDataUrl}
                       className="object-cover"
                     />
                   </button>
