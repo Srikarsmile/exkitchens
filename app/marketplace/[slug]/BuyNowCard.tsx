@@ -5,7 +5,10 @@ import {
   createBuyNowOrderAction,
   type MarketplaceActionState,
 } from "@/app/actions/marketplace";
-import { formatMoney } from "@/lib/marketplace-shared";
+import {
+  calculatePercentageOff,
+  formatMoney,
+} from "@/lib/marketplace-shared";
 import SubmitButton from "@/app/components/forms/SubmitButton";
 
 const initialState: MarketplaceActionState = {};
@@ -14,6 +17,7 @@ interface BuyNowCardProps {
   listingId: string;
   slug: string;
   amountPence: number | null;
+  originalPricePence: number | null;
   supportPhone: string;
   supportPhoneHref: string;
   previewOnly?: boolean;
@@ -23,11 +27,13 @@ export default function BuyNowCard({
   listingId,
   slug,
   amountPence,
+  originalPricePence,
   supportPhone,
   supportPhoneHref,
   previewOnly = false,
 }: BuyNowCardProps) {
   const [state, action] = useActionState(createBuyNowOrderAction, initialState);
+  const discountPercent = calculatePercentageOff(originalPricePence, amountPence);
 
   return (
     <form
@@ -42,10 +48,31 @@ export default function BuyNowCard({
           {previewOnly ? "Buy now preview" : "Buy now"}
         </h2>
         <p className="mt-2 text-sm text-gray-500">
-          Reserve this kitchen for {formatMoney(amountPence)} and complete the
-          next step straight away. Your order stays visible in your account after
+          Reserve this kitchen straight away and complete the next step without
+          leaving the marketplace. Your order stays visible in your account after
           payment.
         </p>
+      </div>
+
+      <div className="rounded-[1.5rem] bg-[#f7f7f4] px-4 py-4">
+        <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+          Offer price
+        </p>
+        <div className="mt-2 flex flex-wrap items-end gap-3">
+          <p className="text-3xl font-medium text-gray-900">
+            {formatMoney(amountPence)}
+          </p>
+          {originalPricePence ? (
+            <p className="text-sm text-gray-400 line-through">
+              RRP {formatMoney(originalPricePence)}
+            </p>
+          ) : null}
+        </div>
+        {discountPercent ? (
+          <p className="mt-2 text-sm font-medium text-[#3d7a44]">
+            Available at {discountPercent}% off retail
+          </p>
+        ) : null}
       </div>
 
       {previewOnly ? (

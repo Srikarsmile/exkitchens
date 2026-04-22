@@ -1,15 +1,26 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import RealtimeRefresh from "@/app/components/RealtimeRefresh";
 import ListingImage from "@/app/components/ListingImage";
 import { getViewer } from "@/lib/auth";
 import { getMarketplaceListings } from "@/lib/marketplace";
-import { formatMoney, formatTimeRemaining } from "@/lib/marketplace-shared";
+import {
+  calculatePercentageOff,
+  formatMoney,
+  formatTimeRemaining,
+} from "@/lib/marketplace-shared";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
 
 const heroBlurDataUrl = getShimmerBlurDataUrl(1600, 900);
 const cardBlurDataUrl = getShimmerBlurDataUrl(720, 540);
+
+export const metadata: Metadata = {
+  title: "Marketplace | ExKitchens",
+  description:
+    "Browse published ExKitchens listings, follow live auctions, and review fixed-price kitchens ready for checkout.",
+};
 
 function getListingBadge(listing: Awaited<ReturnType<typeof getMarketplaceListings>>[number]) {
   if (listing.saleType === "buy_now") {
@@ -132,71 +143,93 @@ export default async function MarketplacePage() {
         </div>
       ) : (
         <section className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {listings.map((listing) => (
-            <article
-              key={listing.id}
-              className="overflow-hidden rounded-[2rem] bg-white shadow-[0_24px_60px_rgba(17,17,17,0.06)]"
-            >
-              <div className="relative h-72 bg-[#f3f3f3]">
-                <ListingImage
-                  src={listing.heroImageUrl || "/assets/kitchen_nano_square.jpg"}
-                  alt={listing.title}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 33vw"
-                  quality={50}
-                  placeholder="blur"
-                  blurDataURL={cardBlurDataUrl}
-                  className="object-cover"
-                />
-                <div className="absolute left-4 top-4 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
-                  {getListingBadge(listing)}
-                </div>
-              </div>
+          {listings.map((listing) => {
+            const buyNowPricePence = listing.buyNowPricePence ?? listing.currentPricePence;
+            const buyNowDiscountPercent = calculatePercentageOff(
+              listing.originalPricePence,
+              buyNowPricePence,
+            );
 
-              <div className="space-y-4 p-6">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#3d7a44]">
-                    {listing.brand || "Curated"}
-                  </p>
-                  <h2 className="mt-2 text-2xl font-medium text-gray-900">
-                    {listing.title}
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-gray-500">
-                    {listing.summary || "Premium ex-display kitchen."}
-                  </p>
+            return (
+              <article
+                key={listing.id}
+                className="overflow-hidden rounded-[2rem] bg-white shadow-[0_24px_60px_rgba(17,17,17,0.06)]"
+              >
+                <div className="relative h-72 bg-[#f3f3f3]">
+                  <ListingImage
+                    src={listing.heroImageUrl || "/assets/kitchen_nano_square.jpg"}
+                    alt={listing.title}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 33vw"
+                    quality={50}
+                    placeholder="blur"
+                    blurDataURL={cardBlurDataUrl}
+                    className="object-cover"
+                  />
+                  <div className="absolute left-4 top-4 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
+                    {getListingBadge(listing)}
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {listing.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-[#f4f7f4] px-3 py-1 text-xs font-medium text-[#3d7a44]"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-end justify-between gap-4 border-t border-gray-100 pt-4">
+                <div className="space-y-4 p-6">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      {listing.saleType === "auction" ? "Current bid" : "Buy now"}
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#3d7a44]">
+                      {listing.brand || "Curated"}
                     </p>
-                    <p className="mt-1 text-2xl font-medium text-gray-900">
-                      {formatMoney(listing.currentPricePence)}
+                    <h2 className="mt-2 text-2xl font-medium text-gray-900">
+                      {listing.title}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-gray-500">
+                      {listing.summary || "Premium ex-display kitchen."}
                     </p>
                   </div>
 
-                  <Link
-                    href={`/marketplace/${listing.slug}`}
-                    className="rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
-                  >
-                    View listing
-                  </Link>
+                  <div className="flex flex-wrap gap-2">
+                    {listing.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-[#f4f7f4] px-3 py-1 text-xs font-medium text-[#3d7a44]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex items-end justify-between gap-4 border-t border-gray-100 pt-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+                        {listing.saleType === "auction" ? "Current bid" : "Offer price"}
+                      </p>
+                      {listing.saleType === "buy_now" && listing.originalPricePence ? (
+                        <p className="mt-1 text-xs text-gray-400 line-through">
+                          RRP {formatMoney(listing.originalPricePence)}
+                        </p>
+                      ) : null}
+                      <p className="mt-1 text-2xl font-medium text-gray-900">
+                        {formatMoney(
+                          listing.saleType === "buy_now"
+                            ? buyNowPricePence
+                            : listing.currentPricePence,
+                        )}
+                      </p>
+                      {listing.saleType === "buy_now" && buyNowDiscountPercent ? (
+                        <p className="mt-1 text-xs font-medium text-[#3d7a44]">
+                          Available at {buyNowDiscountPercent}% off retail
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <Link
+                      href={`/marketplace/${listing.slug}`}
+                      className="rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
+                    >
+                      View listing
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </section>
       )}
     </main>

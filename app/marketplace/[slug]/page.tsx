@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -12,17 +13,42 @@ import { getViewer } from "@/lib/auth";
 import {
   getMarketplaceSupportPhone,
   getMarketplaceSupportPhoneHref,
+  getSiteUrl,
 } from "@/lib/env";
-import { getListingBySlug } from "@/lib/marketplace";
 import {
+  getListingBySlug,
+  getPublishedListingSeoBySlug,
+} from "@/lib/marketplace";
+import {
+  calculatePercentageOff,
   formatDateTime,
   formatMoney,
   formatTimeRemaining,
 } from "@/lib/marketplace-shared";
+import { buildListingMetadata } from "@/lib/seo";
 
 interface ListingPageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export async function generateMetadata({
+  params,
+}: Pick<ListingPageProps, "params">): Promise<Metadata> {
+  const { slug } = await params;
+  const listing = await getPublishedListingSeoBySlug(slug);
+
+  if (!listing) {
+    return {
+      title: "Listing not found | ExKitchens Marketplace",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  return buildListingMetadata(getSiteUrl(), listing);
 }
 
 export default async function ListingPage({
@@ -43,16 +69,7 @@ export default async function ListingPage({
   }
 
   const heroImage = listing.heroImageUrl || "/assets/kitchen_nano_square.jpg";
-  const galleryImages = Array.from(
-    new Set(
-      listing.galleryUrls
-        .filter(
-          (imageUrl) =>
-            !imageUrl.includes("IMG_1809.jpg") &&
-            !imageUrl.includes("IMG_1692.JPG"),
-        ),
-    ),
-  );
+  const galleryImages = Array.from(new Set(listing.galleryUrls.filter(Boolean)));
   const canBid =
     Boolean(viewer.user) &&
     (viewer.profile?.role === "admin" || viewer.profile?.bidder_status === "approved");
@@ -61,6 +78,11 @@ export default async function ListingPage({
     listing.saleType === "auction" && listing.auction?.status === "live";
   const buyNowAvailable =
     listing.saleType === "buy_now" && listing.status === "published" && !listing.order;
+  const buyNowPricePence = listing.buyNowPricePence ?? listing.currentPricePence;
+  const buyNowDiscountPercent = calculatePercentageOff(
+    listing.originalPricePence,
+    buyNowPricePence,
+  );
   const ownsListing = Boolean(
     viewer.user && listing.sellerProfileId && viewer.user.id === listing.sellerProfileId,
   );
@@ -151,11 +173,27 @@ export default async function ListingPage({
               <div className="grid gap-6 md:grid-cols-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                    Price
+                    {listing.saleType === "buy_now" ? "Offer price" : "Price"}
                   </p>
-                  <p className="mt-2 text-2xl font-medium text-gray-900">
-                    {formatMoney(listing.currentPricePence)}
-                  </p>
+                  <div className="mt-2 flex flex-wrap items-end gap-3">
+                    <p className="text-2xl font-medium text-gray-900">
+                      {formatMoney(
+                        listing.saleType === "buy_now"
+                          ? buyNowPricePence
+                          : listing.currentPricePence,
+                      )}
+                    </p>
+                    {listing.saleType === "buy_now" && listing.originalPricePence ? (
+                      <p className="text-sm text-gray-400 line-through">
+                        RRP {formatMoney(listing.originalPricePence)}
+                      </p>
+                    ) : null}
+                  </div>
+                  {listing.saleType === "buy_now" && buyNowDiscountPercent ? (
+                    <p className="mt-2 text-xs font-medium text-[#3d7a44]">
+                      Available at {buyNowDiscountPercent}% off retail
+                    </p>
+                  ) : null}
                 </div>
 
                 <div>
@@ -354,6 +392,7 @@ export default async function ListingPage({
                       listingId={listing.id}
                       slug={listing.slug}
                       amountPence={listing.buyNowPricePence}
+                      originalPricePence={listing.originalPricePence}
                       supportPhone={supportPhone}
                       supportPhoneHref={supportPhoneHref}
                       previewOnly
@@ -375,6 +414,7 @@ export default async function ListingPage({
                     listingId={listing.id}
                     slug={listing.slug}
                     amountPence={listing.buyNowPricePence}
+                    originalPricePence={listing.originalPricePence}
                     supportPhone={supportPhone}
                     supportPhoneHref={supportPhoneHref}
                   />
@@ -386,6 +426,26 @@ export default async function ListingPage({
                     Sign in to reserve this kitchen straight away and keep the order
                     in your account.
                   </p>
+                  {listing.originalPricePence ? (
+                    <div className="mt-5 rounded-[1.5rem] bg-[#f7f7f4] px-4 py-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+                        Offer price
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-end gap-3">
+                        <p className="text-3xl font-medium text-gray-900">
+                          {formatMoney(buyNowPricePence)}
+                        </p>
+                        <p className="text-sm text-gray-400 line-through">
+                          RRP {formatMoney(listing.originalPricePence)}
+                        </p>
+                      </div>
+                      {buyNowDiscountPercent ? (
+                        <p className="mt-2 text-sm font-medium text-[#3d7a44]">
+                          Available at {buyNowDiscountPercent}% off retail
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="mt-5 flex flex-col gap-3">
                     <Link
                       href={`/login?next=${encodeURIComponent(`/marketplace/${listing.slug}`)}`}

@@ -154,6 +154,23 @@ export function formatMoney(pence: number | null | undefined) {
   }).format(pence / 100);
 }
 
+export function calculatePercentageOff(
+  originalPricePence: number | null | undefined,
+  offerPricePence: number | null | undefined,
+) {
+  if (
+    originalPricePence == null ||
+    offerPricePence == null ||
+    originalPricePence <= 0 ||
+    offerPricePence <= 0 ||
+    offerPricePence >= originalPricePence
+  ) {
+    return null;
+  }
+
+  return Math.round(((originalPricePence - offerPricePence) / originalPricePence) * 100);
+}
+
 export function formatTimeRemaining(endAt: string | null | undefined) {
   if (!endAt) {
     return "No deadline";
