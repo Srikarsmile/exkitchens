@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   cancelAuctionAction,
   closeAuctionAction,
+  updateListingSellerAction,
   updateListingStatusAction,
   updateOrderStatusAction,
   updateUserAccessAction,
@@ -16,6 +17,7 @@ import {
   getAdminListings,
   getAdminNotifications,
   getAdminOrders,
+  getSellerOptions,
   getAdminUsers,
 } from "@/lib/admin";
 import {
@@ -28,12 +30,20 @@ import {
 
 export default async function AdminPage() {
   const viewer = await requireAdmin("/admin");
-  const [counts, listings, users, orders, notifications] = await Promise.all([
+  const currentAdminLabel =
+    viewer.profile?.full_name && (viewer.profile?.email || viewer.user.email)
+      ? `${viewer.profile.full_name} (${viewer.profile.email || viewer.user.email})`
+      : viewer.profile?.full_name ||
+        viewer.profile?.email ||
+        viewer.user.email ||
+        "Current admin";
+  const [counts, listings, users, orders, notifications, sellerOptions] = await Promise.all([
     getAdminCounts(),
     getAdminListings(),
     getAdminUsers(),
     getAdminOrders(),
     getAdminNotifications(viewer.user.id),
+    getSellerOptions(),
   ]);
   const unreadAdminNotifications = notifications.filter((item) => !item.readAt).length;
 
@@ -96,7 +106,7 @@ export default async function AdminPage() {
         {[
           {
             title: "Add stock",
-            body: "Open the dedicated listing form, paste media URLs, set prices, and publish.",
+            body: "Open the dedicated listing form, upload images, set prices, and publish.",
             href: "/admin/listings/new",
             label: "New listing",
           },
@@ -224,7 +234,7 @@ export default async function AdminPage() {
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
             "Create the title, summary, description, and seller assignment.",
-            "Paste the hero image URL and gallery image URLs in one place.",
+            "Upload the hero image and gallery images directly from your device.",
             "Set auction timing with normal date and time inputs instead of raw ISO strings.",
           ].map((point) => (
             <div
@@ -573,6 +583,42 @@ export default async function AdminPage() {
                         Save listing
                       </button>
                     </form>
+
+                    {!listing.settlementOrderId ? (
+                      <form action={updateListingSellerAction} className="mt-3 space-y-3">
+                        <input type="hidden" name="listingId" value={listing.id} />
+                        <input type="hidden" name="slug" value={listing.slug} />
+                        <select
+                          name="sellerProfileId"
+                          defaultValue={listing.sellerProfileId || viewer.user.id}
+                          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value={viewer.user.id}>
+                            {currentAdminLabel}
+                          </option>
+                          {sellerOptions
+                            .filter((seller) => seller.id !== viewer.user.id)
+                            .map((seller) => (
+                              <option key={seller.id} value={seller.id}>
+                                {seller.label}
+                              </option>
+                            ))}
+                        </select>
+                        <button
+                          type="submit"
+                          className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
+                        >
+                          Save seller
+                        </button>
+                        <p className="text-xs text-gray-500">
+                          The selected seller account cannot buy this listing while signed in.
+                        </p>
+                      </form>
+                    ) : (
+                      <p className="mt-3 text-xs text-gray-400">
+                        Seller is locked because this listing already has a settlement order.
+                      </p>
+                    )}
 
                     {listing.auction ? (
                       <div className="mt-3 flex flex-wrap gap-2">

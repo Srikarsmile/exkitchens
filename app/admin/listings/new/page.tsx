@@ -2,10 +2,44 @@ import Link from "next/link";
 import AdminCreateListingForm from "@/app/admin/AdminCreateListingForm";
 import { requireAdmin } from "@/lib/auth";
 import { getSellerOptions } from "@/lib/admin";
+import type { SellerOption } from "@/lib/marketplace-shared";
+
+function formatProfileLabel(fullName: string | null | undefined, email: string | null | undefined) {
+  if (fullName && email) {
+    return `${fullName} (${email})`;
+  }
+
+  return fullName || email || "Current admin";
+}
+
+function getDefaultSellerProfileId(
+  sellerOptions: SellerOption[],
+  currentAdminProfileId: string,
+) {
+  const nonCurrentOptions = sellerOptions.filter(
+    (seller) => seller.id !== currentAdminProfileId,
+  );
+  const marketplaceSeller = nonCurrentOptions.find(
+    (seller) =>
+      /info@exkitchens\.com/i.test(seller.label) ||
+      /^ex kitchens\b/i.test(seller.label) ||
+      seller.role === "seller",
+  );
+
+  return marketplaceSeller?.id || nonCurrentOptions[0]?.id || currentAdminProfileId;
+}
 
 export default async function AdminNewListingPage() {
-  await requireAdmin("/admin/listings/new");
+  const viewer = await requireAdmin("/admin/listings/new");
   const sellerOptions = await getSellerOptions();
+  const currentAdminLabel = formatProfileLabel(
+    viewer.profile?.full_name,
+    viewer.profile?.email || viewer.user.email,
+  );
+  const defaultSellerProfileId = getDefaultSellerProfileId(
+    sellerOptions,
+    viewer.user.id,
+  );
 
   return (
     <main id="main-content" className="mx-auto w-full max-w-5xl px-6 py-12">
@@ -73,7 +107,12 @@ export default async function AdminNewListingPage() {
         </section>
 
         <section className="rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
-          <AdminCreateListingForm sellerOptions={sellerOptions} />
+          <AdminCreateListingForm
+            sellerOptions={sellerOptions}
+            currentAdminProfileId={viewer.user.id}
+            currentAdminLabel={currentAdminLabel}
+            defaultSellerProfileId={defaultSellerProfileId}
+          />
         </section>
       </div>
     </main>

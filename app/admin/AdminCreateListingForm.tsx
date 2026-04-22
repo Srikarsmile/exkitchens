@@ -19,6 +19,9 @@ const LISTING_IMAGE_BUCKET = "listing-images";
 
 interface AdminCreateListingFormProps {
   sellerOptions: SellerOption[];
+  currentAdminProfileId: string;
+  currentAdminLabel: string;
+  defaultSellerProfileId: string;
 }
 
 interface PreviewImage {
@@ -165,9 +168,14 @@ function UploadPanel({
 
 export default function AdminCreateListingForm({
   sellerOptions,
+  currentAdminProfileId,
+  currentAdminLabel,
+  defaultSellerProfileId,
 }: AdminCreateListingFormProps) {
   const [state, action] = useActionState(createListingAction, initialState);
   const [saleType, setSaleType] = useState<"auction" | "buy_now">("auction");
+  const [selectedSellerProfileId, setSelectedSellerProfileId] =
+    useState(defaultSellerProfileId);
   const [heroPreview, setHeroPreview] = useState<PreviewImage[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<PreviewImage[]>([]);
   const [auctionStartsAtOffsetMinutes, setAuctionStartsAtOffsetMinutes] =
@@ -183,6 +191,7 @@ export default function AdminCreateListingForm({
   const uploadedHeroPathRef = useRef<HTMLInputElement>(null);
   const uploadedGalleryPathsRef = useRef<HTMLInputElement>(null);
   const bypassSubmitPreparationRef = useRef(false);
+  const isAdminSellerSelection = selectedSellerProfileId === currentAdminProfileId;
 
   useEffect(() => {
     return () => {
@@ -599,20 +608,35 @@ export default function AdminCreateListingForm({
 
           <Field
             label="Seller profile"
-            hint="Attach the listing to an existing seller or leave it under the current admin."
+            hint="Listings assigned to your own admin profile cannot be purchased from this same account."
           >
             <select
               name="sellerProfileId"
-              defaultValue=""
+              required
+              value={selectedSellerProfileId}
+              onChange={(event) => setSelectedSellerProfileId(event.currentTarget.value)}
               className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
             >
-              <option value="">Use my admin profile</option>
-              {sellerOptions.map((seller) => (
+              <option value={currentAdminProfileId}>
+                Use my admin profile: {currentAdminLabel}
+              </option>
+              {sellerOptions
+                .filter((seller) => seller.id !== currentAdminProfileId)
+                .map((seller) => (
                 <option key={seller.id} value={seller.id}>
                   {seller.label}
                 </option>
-              ))}
+                ))}
             </select>
+            <p
+              className={`mt-2 text-xs leading-5 ${
+                isAdminSellerSelection ? "text-amber-700" : "text-gray-500"
+              }`}
+            >
+              {isAdminSellerSelection
+                ? "This listing will belong to your admin account, so this same login will see seller view instead of buy-now checkout."
+                : "This listing will stay buyable when you are signed into your admin account, because the seller is a different profile."}
+            </p>
           </Field>
 
           <Field

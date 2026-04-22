@@ -326,9 +326,20 @@ export default async function ListingPage({
                       Seller view
                     </h2>
                     <p className="mt-3 text-sm leading-6 text-gray-500">
-                      You cannot purchase your own listing. Buyer checkout opens on
-                      this page for signed-in customers.
+                      This listing is assigned to your account as the seller, so
+                      checkout is hidden here. Reassign the seller from admin or
+                      sign in with a different buyer account to use buy now.
                     </p>
+                    {viewer.profile?.role === "admin" ? (
+                      <div className="mt-5">
+                        <Link
+                          href="/admin#listings"
+                          className="rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
+                        >
+                          Open listing controls
+                        </Link>
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <BuyNowCard

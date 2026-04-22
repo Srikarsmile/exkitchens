@@ -56,7 +56,7 @@ const createListingSchema = z.object({
   auctionEndsAt: z.string().optional(),
   auctionStartsAtOffsetMinutes: z.coerce.number().int().min(-840).max(840).optional(),
   auctionEndsAtOffsetMinutes: z.coerce.number().int().min(-840).max(840).optional(),
-  sellerProfileId: z.string().uuid().optional().or(z.literal("")),
+  sellerProfileId: z.string().uuid("Choose a seller account for this listing."),
   featured: z.boolean().optional(),
 });
 
@@ -71,6 +71,12 @@ const updateUserAccessSchema = z.object({
 const updateListingStatusSchema = z.object({
   listingId: z.string().uuid(),
   status: z.enum(["draft", "published", "archived", "sold"]),
+  slug: z.string().trim().optional(),
+});
+
+const updateListingSellerSchema = z.object({
+  listingId: z.string().uuid(),
+  sellerProfileId: z.string().uuid(),
   slug: z.string().trim().optional(),
 });
 
@@ -214,7 +220,7 @@ export async function createListingAction(
       formData.get("auctionStartsAtOffsetMinutes")?.toString().trim() || undefined,
     auctionEndsAtOffsetMinutes:
       formData.get("auctionEndsAtOffsetMinutes")?.toString().trim() || undefined,
-    sellerProfileId: formData.get("sellerProfileId")?.toString().trim() || undefined,
+    sellerProfileId: formData.get("sellerProfileId")?.toString().trim(),
     featured: formData.get("featured") === "on",
   });
 
@@ -224,7 +230,7 @@ export async function createListingAction(
     };
   }
 
-  const admin = await requireAdmin("/admin/listings/new");
+  await requireAdmin("/admin/listings/new");
   const data = parsed.data;
   const slug = slugify(data.slug || data.title);
   const heroFile = readHeroImageFile(formData);
@@ -322,7 +328,7 @@ export async function createListingAction(
       data.reservePrice != null ? bidAmountToPence(data.reservePrice) : null,
     p_auction_starts_at: auctionStartsAt,
     p_auction_ends_at: auctionEndsAt,
-    p_seller_profile_id: data.sellerProfileId || admin.user?.id || null,
+    p_seller_profile_id: data.sellerProfileId,
   });
 
   if (error) {
@@ -458,6 +464,43 @@ export async function updateListingStatusAction(formData: FormData) {
 
   revalidateAppPaths(parsed.data.slug);
   await deliverPendingNotificationEmails();
+}
+
+export async function updateListingSellerAction(formData: FormData) {
+  if (!isSupabaseConfigured()) {
+    return;
+  }
+
+  const parsed = updateListingSellerSchema.safeParse({
+    listingId: formData.get("listingId"),
+    sellerProfileId: formData.get("sellerProfileId"),
+    slug: formData.get("slug"),
+  });
+
+  if (!parsed.success) {
+    return;
+  }
+
+  await requireAdmin("/admin");
+  const supabase = await createClient();
+
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("id, settlement_order_id")
+    .eq("id", parsed.data.listingId)
+    .maybeSingle();
+
+  if (listing?.settlement_order_id) {
+    revalidateAppPaths(parsed.data.slug);
+    return;
+  }
+
+  await supabase
+    .from("listings")
+    .update({ seller_profile_id: parsed.data.sellerProfileId })
+    .eq("id", parsed.data.listingId);
+
+  revalidateAppPaths(parsed.data.slug);
 }
 
 export async function closeAuctionAction(formData: FormData) {
