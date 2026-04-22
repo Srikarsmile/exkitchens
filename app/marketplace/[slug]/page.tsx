@@ -309,10 +309,10 @@ export default async function ListingPage({
                       Your account is signed in, but bidding starts after an admin
                       approves the profile.
                     </p>
-                    <div className="mt-5">
+                    <div className="mt-5 flex">
                       <Link
                         href="/account"
-                        className="rounded-full bg-amber-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-amber-950"
+                        className="inline-flex w-full items-center justify-center rounded-full bg-amber-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-amber-950 sm:w-auto"
                       >
                         Open account
                       </Link>
@@ -326,10 +326,10 @@ export default async function ListingPage({
                     Buyers must sign in and be approved before they can join a live
                     auction.
                   </p>
-                  <div className="mt-5">
+                  <div className="mt-5 flex">
                     <Link
                       href={`/login?next=${encodeURIComponent(`/marketplace/${listing.slug}`)}`}
-                      className="rounded-full bg-[#3d7a44] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2f6135]"
+                      className="inline-flex w-full items-center justify-center rounded-full bg-[#3d7a44] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2f6135] sm:w-auto"
                     >
                       Sign in
                     </Link>
@@ -349,10 +349,10 @@ export default async function ListingPage({
                         still blocked. The card below is a preview of the real
                         buyer checkout panel.
                       </p>
-                      <div className="mt-5">
+                      <div className="mt-5 flex">
                         <Link
                           href="/admin#listings"
-                          className="rounded-full bg-amber-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-amber-950"
+                          className="inline-flex w-full items-center justify-center rounded-full bg-amber-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-amber-950 sm:w-auto"
                         >
                           Open listing controls
                         </Link>
@@ -394,16 +394,16 @@ export default async function ListingPage({
                     Sign in to reserve this kitchen straight away and keep the order
                     in your account.
                   </p>
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-5 flex flex-col gap-3">
                     <Link
                       href={`/login?next=${encodeURIComponent(`/marketplace/${listing.slug}`)}`}
-                      className="rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
+                      className="inline-flex w-full items-center justify-center rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
                     >
                       Sign in to buy now
                     </Link>
                     <a
                       href={supportPhoneHref}
-                      className="inline-flex items-center justify-center rounded-full border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
+                      className="inline-flex w-full items-center justify-center rounded-full border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
                     >
                       Call us on {supportPhone}
                     </a>
