@@ -4,6 +4,7 @@ import { getAllowedListingImageHosts } from "./lib/listing-image-hosts";
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
+      bodySizeLimit: "64mb",
       allowedOrigins: [
         "exkitchens.com",
         "www.exkitchens.com",
