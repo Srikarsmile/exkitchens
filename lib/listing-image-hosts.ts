@@ -57,6 +57,7 @@ export function getAllowedListingImageHosts(env = process.env) {
   addPattern(normaliseUrl(env.VERCEL_PROJECT_PRODUCTION_URL));
   addPattern(normaliseUrl(env.VERCEL_URL));
   addPattern(normaliseUrl(env.NEXT_PUBLIC_SUPABASE_URL), "/storage/v1/object/public/**");
+  addPattern(normaliseUrl(env.NEXT_PUBLIC_SUPABASE_URL), "/storage/v1/render/image/public/**");
 
   return Array.from(patterns.values());
 }

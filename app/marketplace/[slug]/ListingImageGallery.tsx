@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
+import ListingImage from "@/app/components/ListingImage";
 
 interface ListingImageGalleryProps {
   title: string;
@@ -82,7 +82,7 @@ export default function ListingImageGallery({
           className="group relative block min-h-[320px] w-full overflow-hidden rounded-[2rem] bg-[#f3f3f3] text-left md:min-h-[420px] lg:h-[560px]"
           aria-label={`View larger image of ${title}`}
         >
-          <Image
+          <ListingImage
             src={heroImage}
             alt={title}
             fill
@@ -114,7 +114,7 @@ export default function ListingImageGallery({
                   className="group relative h-44 overflow-hidden rounded-2xl bg-[#f3f3f3] text-left"
                   aria-label={`View gallery image ${index + 1} for ${title}`}
                 >
-                  <Image
+                  <ListingImage
                     src={imageUrl}
                     alt={`${title} gallery image ${index + 1}`}
                     fill
@@ -173,7 +173,7 @@ export default function ListingImageGallery({
 
             <div className="relative flex-1" onClick={(event) => event.stopPropagation()}>
               <div className="relative h-full min-h-[50vh] overflow-hidden rounded-[2rem] bg-black/30">
-                <Image
+                <ListingImage
                   src={activeImage}
                   alt={`${title} enlarged image ${activeImageIndex + 1}`}
                   fill
@@ -233,7 +233,7 @@ export default function ListingImageGallery({
                     }`}
                     aria-label={`Open image ${index + 1}`}
                   >
-                    <Image
+                    <ListingImage
                       src={imageUrl}
                       alt={`${title} thumbnail ${index + 1}`}
                       fill

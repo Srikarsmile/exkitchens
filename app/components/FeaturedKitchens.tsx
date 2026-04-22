@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect, type MouseEvent } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Clock, Tag } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import ListingImage from "@/app/components/ListingImage";
 import type { ListingCardData } from "@/lib/marketplace-shared";
 import { formatMoney, formatTimeRemaining } from "@/lib/marketplace-shared";
 import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
@@ -165,7 +165,7 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
                       </span>
                     </div>
 
-                    <Image
+                    <ListingImage
                       src={item.heroImageUrl || "/assets/kitchen_nano_square.jpg"}
                       alt={item.title}
                       fill

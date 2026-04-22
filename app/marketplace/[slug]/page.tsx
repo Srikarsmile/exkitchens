@@ -25,11 +25,6 @@ interface ListingPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-function withImageVersion(url: string) {
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}v=20260419`;
-}
-
 export default async function ListingPage({
   params,
   searchParams,
@@ -47,9 +42,7 @@ export default async function ListingPage({
     notFound();
   }
 
-  const heroImage = withImageVersion(
-    listing.heroImageUrl || "/assets/kitchen_nano_square.jpg",
-  );
+  const heroImage = listing.heroImageUrl || "/assets/kitchen_nano_square.jpg";
   const galleryImages = Array.from(
     new Set(
       listing.galleryUrls
@@ -57,8 +50,7 @@ export default async function ListingPage({
           (imageUrl) =>
             !imageUrl.includes("IMG_1809.jpg") &&
             !imageUrl.includes("IMG_1692.JPG"),
-        )
-        .map(withImageVersion),
+        ),
     ),
   );
   const canBid =

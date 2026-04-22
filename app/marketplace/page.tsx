@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import RealtimeRefresh from "@/app/components/RealtimeRefresh";
+import ListingImage from "@/app/components/ListingImage";
 import { getViewer } from "@/lib/auth";
 import { getMarketplaceListings } from "@/lib/marketplace";
 import { formatMoney, formatTimeRemaining } from "@/lib/marketplace-shared";
@@ -137,7 +138,7 @@ export default async function MarketplacePage() {
               className="overflow-hidden rounded-[2rem] bg-white shadow-[0_24px_60px_rgba(17,17,17,0.06)]"
             >
               <div className="relative h-72 bg-[#f3f3f3]">
-                <Image
+                <ListingImage
                   src={listing.heroImageUrl || "/assets/kitchen_nano_square.jpg"}
                   alt={listing.title}
                   fill
