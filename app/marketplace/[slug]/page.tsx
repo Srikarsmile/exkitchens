@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -6,6 +5,7 @@ import CancelReservationButton from "@/app/account/CancelReservationButton";
 import OrderCheckoutButton from "@/app/account/OrderCheckoutButton";
 import BidForm from "@/app/marketplace/[slug]/BidForm";
 import BuyNowCard from "@/app/marketplace/[slug]/BuyNowCard";
+import ListingImageGallery from "@/app/marketplace/[slug]/ListingImageGallery";
 import RealtimeRefresh from "@/app/components/RealtimeRefresh";
 import { toggleWatchlistAction } from "@/app/actions/marketplace";
 import { getViewer } from "@/lib/auth";
@@ -50,9 +50,17 @@ export default async function ListingPage({
   const heroImage = withImageVersion(
     listing.heroImageUrl || "/assets/kitchen_nano_square.jpg",
   );
-  const galleryImages = listing.galleryUrls
-    .filter((imageUrl) => !imageUrl.includes("IMG_1809.jpg") && !imageUrl.includes("IMG_1692.JPG"))
-    .map(withImageVersion);
+  const galleryImages = Array.from(
+    new Set(
+      listing.galleryUrls
+        .filter(
+          (imageUrl) =>
+            !imageUrl.includes("IMG_1809.jpg") &&
+            !imageUrl.includes("IMG_1692.JPG"),
+        )
+        .map(withImageVersion),
+    ),
+  );
   const canBid =
     Boolean(viewer.user) &&
     (viewer.profile?.role === "admin" || viewer.profile?.bidder_status === "approved");
@@ -99,34 +107,11 @@ export default async function ListingPage({
         </Link>
 
         <section className="space-y-4">
-          <div className="relative min-h-[320px] overflow-hidden rounded-[2rem] bg-[#f3f3f3] md:min-h-[420px] lg:h-[560px]">
-            <Image
-              src={heroImage}
-              alt={listing.title}
-              fill
-              sizes="100vw"
-              className="object-cover"
-            />
-          </div>
-
-          {galleryImages.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {galleryImages.map((imageUrl) => (
-                <div
-                  key={imageUrl}
-                  className="relative h-44 overflow-hidden rounded-2xl bg-[#f3f3f3]"
-                >
-                  <Image
-                    src={imageUrl}
-                    alt={listing.title}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null}
+          <ListingImageGallery
+            title={listing.title}
+            heroImage={heroImage}
+            galleryImages={galleryImages}
+          />
         </section>
 
         <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr]">
