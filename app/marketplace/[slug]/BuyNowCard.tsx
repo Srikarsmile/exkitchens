@@ -16,6 +16,7 @@ interface BuyNowCardProps {
   amountPence: number | null;
   supportPhone: string;
   supportPhoneHref: string;
+  previewOnly?: boolean;
 }
 
 export default function BuyNowCard({
@@ -24,25 +25,36 @@ export default function BuyNowCard({
   amountPence,
   supportPhone,
   supportPhoneHref,
+  previewOnly = false,
 }: BuyNowCardProps) {
   const [state, action] = useActionState(createBuyNowOrderAction, initialState);
 
   return (
     <form
-      action={action}
+      action={previewOnly ? undefined : action}
       className="space-y-4 rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm"
     >
       <input type="hidden" name="listingId" value={listingId} />
       <input type="hidden" name="slug" value={slug} />
 
       <div>
-        <h2 className="text-xl font-medium text-gray-900">Buy now</h2>
+        <h2 className="text-xl font-medium text-gray-900">
+          {previewOnly ? "Buy now preview" : "Buy now"}
+        </h2>
         <p className="mt-2 text-sm text-gray-500">
           Reserve this kitchen for {formatMoney(amountPence)} and complete the
           next step straight away. Your order stays visible in your account after
           payment.
         </p>
       </div>
+
+      {previewOnly ? (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Admin preview only. This is the same buy-now panel buyers see, but the
+          checkout button stays disabled because your account owns this listing as
+          the seller.
+        </p>
+      ) : null}
 
       {state.message ? (
         <p
@@ -56,11 +68,21 @@ export default function BuyNowCard({
         </p>
       ) : null}
 
-      <SubmitButton
-        idleLabel="Buy now"
-        pendingLabel="Opening checkout..."
-        className="w-full rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b] disabled:cursor-not-allowed disabled:opacity-70"
-      />
+      {previewOnly ? (
+        <button
+          type="button"
+          disabled
+          className="w-full cursor-not-allowed rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white opacity-70"
+        >
+          Preview only
+        </button>
+      ) : (
+        <SubmitButton
+          idleLabel="Buy now"
+          pendingLabel="Opening checkout..."
+          className="w-full rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b] disabled:cursor-not-allowed disabled:opacity-70"
+        />
+      )}
 
       <div className="space-y-3 border-t border-gray-100 pt-4">
         <p className="text-sm leading-6 text-gray-500">

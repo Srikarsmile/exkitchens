@@ -64,6 +64,7 @@ export default async function ListingPage({
   const canBid =
     Boolean(viewer.user) &&
     (viewer.profile?.role === "admin" || viewer.profile?.bidder_status === "approved");
+  const isAdminViewer = viewer.profile?.role === "admin";
   const isLiveAuction =
     listing.saleType === "auction" && listing.auction?.status === "live";
   const buyNowAvailable =
@@ -276,7 +277,24 @@ export default async function ListingPage({
               </div>
             ) : isLiveAuction && listing.auction ? (
               viewer.user ? (
-                canBid ? (
+                ownsListing && isAdminViewer ? (
+                  <BidForm
+                    auctionId={listing.auction.id}
+                    slug={listing.slug}
+                    minimumBidPence={listing.auction.minimumNextBidPence}
+                    previewOnly
+                  />
+                ) : ownsListing ? (
+                  <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
+                    <h2 className="text-xl font-medium text-gray-900">
+                      Seller view
+                    </h2>
+                    <p className="mt-3 text-sm leading-6 text-gray-500">
+                      This listing is assigned to your account as the seller, so
+                      live bidding is hidden here.
+                    </p>
+                  </div>
+                ) : canBid ? (
                   <BidForm
                     auctionId={listing.auction.id}
                     slug={listing.slug}
@@ -320,7 +338,36 @@ export default async function ListingPage({
               )
             ) : buyNowAvailable ? (
               viewer.user ? (
-                ownsListing ? (
+                ownsListing && isAdminViewer ? (
+                  <div className="space-y-4">
+                    <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
+                      <h2 className="text-xl font-medium text-amber-900">
+                        Admin seller preview
+                      </h2>
+                      <p className="mt-3 text-sm leading-6 text-amber-800">
+                        Your account owns this listing, so a live self-purchase is
+                        still blocked. The card below is a preview of the real
+                        buyer checkout panel.
+                      </p>
+                      <div className="mt-5">
+                        <Link
+                          href="/admin#listings"
+                          className="rounded-full bg-amber-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-amber-950"
+                        >
+                          Open listing controls
+                        </Link>
+                      </div>
+                    </div>
+                    <BuyNowCard
+                      listingId={listing.id}
+                      slug={listing.slug}
+                      amountPence={listing.buyNowPricePence}
+                      supportPhone={supportPhone}
+                      supportPhoneHref={supportPhoneHref}
+                      previewOnly
+                    />
+                  </div>
+                ) : ownsListing ? (
                   <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
                     <h2 className="text-xl font-medium text-gray-900">
                       Seller view
@@ -330,16 +377,6 @@ export default async function ListingPage({
                       checkout is hidden here. Reassign the seller from admin or
                       sign in with a different buyer account to use buy now.
                     </p>
-                    {viewer.profile?.role === "admin" ? (
-                      <div className="mt-5">
-                        <Link
-                          href="/admin#listings"
-                          className="rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
-                        >
-                          Open listing controls
-                        </Link>
-                      </div>
-                    ) : null}
                   </div>
                 ) : (
                   <BuyNowCard

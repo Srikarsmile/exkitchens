@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { bidAmountToPence } from "@/lib/marketplace-shared";
+import { requireUser } from "@/lib/auth";
 import { deliverPendingNotificationEmails } from "@/lib/email";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -46,6 +47,7 @@ export async function placeBidAction(
     return { message: "Enter a valid bid amount." };
   }
 
+  await requireUser(`/marketplace/${parsed.data.slug}`);
   const supabase = await createClient();
   await runMarketplaceMaintenance(supabase);
   const { error } = await supabase.rpc("place_bid", {
