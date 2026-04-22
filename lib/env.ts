@@ -7,7 +7,7 @@ const resendApiKey = process.env.RESEND_API_KEY;
 const marketplaceSupportPhone =
   process.env.NEXT_PUBLIC_MARKETPLACE_SUPPORT_PHONE ||
   process.env.MARKETPLACE_SUPPORT_PHONE ||
-  "020 3996 2398";
+  "07913546586";
 
 function normaliseUrl(input?: string | null) {
   if (!input) {

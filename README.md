@@ -41,6 +41,7 @@ Required for branded auth emails and notification delivery:
 - `MARKETPLACE_EMAIL_FROM`
 
 Optional operational secret:
+- `NEXT_PUBLIC_MARKETPLACE_SUPPORT_PHONE` (optional, defaults to `07913546586`)
 
 - `MARKETPLACE_CRON_SECRET`
 
