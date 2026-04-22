@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseAdminConfigured, isSupabaseConfigured } from "@/lib/env";
 import type {
@@ -15,6 +16,7 @@ import type {
 
 type MarketplaceDbClient =
   | ReturnType<typeof createAdminClient>
+  | ReturnType<typeof createPublicClient>
   | Awaited<ReturnType<typeof createClient>>;
 
 export type SupabaseListingRow = {
@@ -88,6 +90,22 @@ type PublicBidFeedRow = {
   amount_pence: number;
   created_at: string;
   is_current: boolean;
+};
+
+type PublicListingSeoRow = {
+  slug: string;
+  title: string;
+  brand: string | null;
+  summary: string | null;
+  description: string | null;
+  hero_image_url: string | null;
+  tags: string[] | null;
+  location: string | null;
+};
+
+type PublicListingSitemapRow = {
+  slug: string;
+  updated_at: string | null;
 };
 
 const MARKETPLACE_MAINTENANCE_THROTTLE_MS = 15_000;
@@ -217,7 +235,7 @@ export async function getFeaturedListings(limit = 6) {
     return [] as ListingCardData[];
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
   const { data, error } = await supabase
     .from("listings")
@@ -242,7 +260,7 @@ export async function getMarketplaceListings() {
     return [] as ListingCardData[];
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
   const { data, error } = await supabase
     .from("listings")
@@ -259,6 +277,67 @@ export async function getMarketplaceListings() {
   }
 
   return (data as SupabaseListingRow[]).map(mapListing);
+}
+
+export async function getPublishedListingSeoBySlug(slug: string) {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("listings")
+    .select("slug, title, brand, summary, description, hero_image_url, tags, location")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) {
+      console.error("Failed to load listing SEO data", error);
+    }
+
+    return null;
+  }
+
+  const row = data as PublicListingSeoRow;
+
+  return {
+    slug: row.slug,
+    title: row.title,
+    brand: row.brand,
+    summary: row.summary,
+    description: row.description,
+    heroImageUrl: row.hero_image_url,
+    tags: row.tags ?? [],
+    location: row.location,
+  };
+}
+
+export async function getPublishedListingSitemapEntries() {
+  if (!isSupabaseConfigured()) {
+    return [] as Array<{ slug: string; updatedAt: string | null }>;
+  }
+
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("listings")
+    .select("slug, updated_at")
+    .eq("status", "published")
+    .order("updated_at", { ascending: false });
+
+  if (error || !data) {
+    if (error) {
+      console.error("Failed to load listing sitemap entries", error);
+    }
+
+    return [];
+  }
+
+  return (data as PublicListingSitemapRow[]).map((row) => ({
+    slug: row.slug,
+    updatedAt: row.updated_at,
+  }));
 }
 
 export async function getListingBySlug(slug: string, viewerId?: string | null) {
