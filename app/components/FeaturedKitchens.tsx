@@ -170,7 +170,7 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
                       alt={item.title}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      quality={60}
+                      quality={50}
                       placeholder="blur"
                       blurDataURL={cardBlurDataUrl}
                       className="object-cover transition-transform duration-700 group-hover:scale-105"

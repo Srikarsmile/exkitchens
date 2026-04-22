@@ -56,7 +56,7 @@ export default async function MarketplacePage() {
             alt="Ex-display kitchen showroom"
             fill
             sizes="100vw"
-            quality={70}
+            quality={75}
             placeholder="blur"
             blurDataURL={heroBlurDataUrl}
             className="object-cover"
@@ -142,7 +142,7 @@ export default async function MarketplacePage() {
                   alt={listing.title}
                   fill
                   sizes="(max-width: 1024px) 100vw, 33vw"
-                  quality={60}
+                  quality={50}
                   placeholder="blur"
                   blurDataURL={cardBlurDataUrl}
                   className="object-cover"

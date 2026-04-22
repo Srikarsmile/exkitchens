@@ -45,7 +45,7 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
           alt="Luxury Ex-Display Kitchen"
           fill
           sizes="100vw"
-          quality={72}
+          quality={75}
           placeholder="blur"
           blurDataURL={heroBlurDataUrl}
           className="object-cover object-center pointer-events-none"

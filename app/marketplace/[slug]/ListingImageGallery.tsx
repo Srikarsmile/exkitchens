@@ -88,7 +88,7 @@ export default function ListingImageGallery({
             fill
             priority
             sizes="100vw"
-            quality={70}
+            quality={75}
             placeholder="blur"
             blurDataURL={heroBlurDataUrl}
             className="object-cover transition duration-300 group-hover:scale-[1.02]"
@@ -119,7 +119,7 @@ export default function ListingImageGallery({
                     alt={`${title} gallery image ${index + 1}`}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                    quality={55}
+                    quality={50}
                     placeholder="blur"
                     blurDataURL={galleryBlurDataUrl}
                     className="object-cover transition duration-300 group-hover:scale-[1.03]"
@@ -238,7 +238,7 @@ export default function ListingImageGallery({
                       alt={`${title} thumbnail ${index + 1}`}
                       fill
                       sizes="96px"
-                      quality={45}
+                      quality={50}
                       placeholder="blur"
                       blurDataURL={galleryBlurDataUrl}
                       className="object-cover"
