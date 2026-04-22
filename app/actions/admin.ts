@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { deliverPendingNotificationEmails } from "@/lib/email";
@@ -14,6 +15,8 @@ import {
   removeListingImages,
   uploadListingImages,
 } from "@/lib/listing-image-storage";
+import { releasePendingBuyNowOrder } from "@/lib/orders";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { bidAmountToPence } from "@/lib/marketplace-shared";
@@ -101,6 +104,15 @@ const updateOrderStatusSchema = z.object({
   paymentNotes: z.string().trim().optional(),
 });
 
+const deleteOrderSchema = z.object({
+  orderId: z.string().uuid(),
+  listingSlug: z.string().trim().optional(),
+});
+
+const deleteUserSchema = z.object({
+  profileId: z.string().uuid(),
+});
+
 function slugify(input: string) {
   return input
     .toLowerCase()
@@ -169,6 +181,19 @@ function revalidateAppPaths(slug?: string | null) {
   if (slug) {
     revalidatePath(`/marketplace/${slug}`);
   }
+}
+
+function buildAdminRedirect(
+  section: "approvals" | "orders" | "listings",
+  message: string,
+  tone: "success" | "error" = "success",
+) {
+  const params = new URLSearchParams({
+    message,
+    messageType: tone,
+  });
+
+  return `/admin?${params.toString()}#${section}`;
 }
 
 async function cleanupListingImages(paths: string[]) {
@@ -419,6 +444,150 @@ export async function updateUserAccessAction(formData: FormData) {
 
   revalidateAppPaths();
   await deliverPendingNotificationEmails();
+}
+
+export async function deleteUserAction(formData: FormData) {
+  if (!isSupabaseConfigured()) {
+    return;
+  }
+
+  const parsed = deleteUserSchema.safeParse({
+    profileId: formData.get("profileId"),
+  });
+
+  if (!parsed.success) {
+    redirect(buildAdminRedirect("approvals", "Invalid user deletion request.", "error"));
+  }
+
+  await requireAdmin("/admin");
+  const supabase = createAdminClient();
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, role, full_name, email")
+    .eq("id", parsed.data.profileId)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    redirect(buildAdminRedirect("approvals", "User not found.", "error"));
+  }
+
+  if (profile.role === "admin") {
+    redirect(
+      buildAdminRedirect(
+        "approvals",
+        "Admin accounts are protected and cannot be deleted here.",
+        "error",
+      ),
+    );
+  }
+
+  const [
+    { count: buyerActiveOrders },
+    { count: sellerActiveOrders },
+    { count: ownedListings },
+    { data: buyerOrders, error: buyerOrdersError },
+  ] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("*", { head: true, count: "exact" })
+      .eq("buyer_profile_id", profile.id)
+      .in("status", ["awaiting_payment", "paid", "fulfilled"]),
+    supabase
+      .from("orders")
+      .select("*", { head: true, count: "exact" })
+      .eq("seller_profile_id", profile.id)
+      .in("status", ["awaiting_payment", "paid", "fulfilled"]),
+    supabase
+      .from("listings")
+      .select("*", { head: true, count: "exact" })
+      .eq("seller_profile_id", profile.id)
+      .in("status", ["draft", "published", "sold"]),
+    supabase
+      .from("orders")
+      .select("id, status")
+      .eq("buyer_profile_id", profile.id),
+  ]);
+
+  if ((buyerActiveOrders ?? 0) > 0 || (sellerActiveOrders ?? 0) > 0) {
+    redirect(
+      buildAdminRedirect(
+        "approvals",
+        "Delete blocked. Cancel, refund, or fulfil the user's active orders first.",
+        "error",
+      ),
+    );
+  }
+
+  if ((ownedListings ?? 0) > 0) {
+    redirect(
+      buildAdminRedirect(
+        "approvals",
+        "Delete blocked. Reassign or archive the user's listings first.",
+        "error",
+      ),
+    );
+  }
+
+  if (buyerOrdersError) {
+    redirect(
+      buildAdminRedirect(
+        "approvals",
+        "Could not inspect the user's orders before deletion.",
+        "error",
+      ),
+    );
+  }
+
+  const nonTerminalOrder = (buyerOrders || []).find(
+    (order) => !["cancelled", "refunded"].includes(order.status),
+  );
+
+  if (nonTerminalOrder) {
+    redirect(
+      buildAdminRedirect(
+        "approvals",
+        "Delete blocked. This user still has a non-terminal order record.",
+        "error",
+      ),
+    );
+  }
+
+  const buyerOrderIds = (buyerOrders || []).map((order) => order.id);
+
+  if (buyerOrderIds.length > 0) {
+    await supabase
+      .from("listings")
+      .update({
+        status: "published",
+        winner_profile_id: null,
+        sold_at: null,
+        settlement_order_id: null,
+      })
+      .in("settlement_order_id", buyerOrderIds);
+
+    await supabase.from("orders").delete().eq("buyer_profile_id", profile.id);
+  }
+
+  const deleteResult = await supabase.auth.admin.deleteUser(profile.id);
+
+  if (deleteResult.error) {
+    redirect(
+      buildAdminRedirect(
+        "approvals",
+        `Delete failed for ${profile.email || profile.id}.`,
+        "error",
+      ),
+    );
+  }
+
+  revalidateAppPaths();
+  redirect(
+    buildAdminRedirect(
+      "approvals",
+      `Deleted ${profile.email || profile.full_name || "user"} and cleaned up their terminal orders.`,
+    ),
+  );
 }
 
 export async function updateListingStatusAction(formData: FormData) {
@@ -692,4 +861,67 @@ export async function updateOrderStatusAction(formData: FormData) {
 
   revalidateAppPaths(parsed.data.listingSlug);
   await deliverPendingNotificationEmails();
+}
+
+export async function deleteOrderAction(formData: FormData) {
+  if (!isSupabaseConfigured()) {
+    return;
+  }
+
+  const parsed = deleteOrderSchema.safeParse({
+    orderId: formData.get("orderId"),
+    listingSlug: formData.get("listingSlug"),
+  });
+
+  if (!parsed.success) {
+    redirect(buildAdminRedirect("orders", "Invalid order deletion request.", "error"));
+  }
+
+  await requireAdmin("/admin");
+  const supabase = createAdminClient();
+
+  const { data: order, error } = await supabase
+    .from("orders")
+    .select("id, kind, status, listing_id")
+    .eq("id", parsed.data.orderId)
+    .maybeSingle();
+
+  if (error || !order) {
+    redirect(buildAdminRedirect("orders", "Order not found.", "error"));
+  }
+
+  if (order.status === "awaiting_payment" && order.kind === "buy_now") {
+    await releasePendingBuyNowOrder({
+      orderId: order.id,
+      reason: "Deleted by admin from the orders dashboard.",
+      notify: false,
+    });
+  } else if (!["cancelled", "refunded"].includes(order.status)) {
+    redirect(
+      buildAdminRedirect(
+        "orders",
+        "Delete blocked. Only cancelled, refunded, or pending buy-now orders can be deleted.",
+        "error",
+      ),
+    );
+  }
+
+  await supabase
+    .from("listings")
+    .update({
+      status: "published",
+      winner_profile_id: null,
+      sold_at: null,
+      settlement_order_id: null,
+    })
+    .eq("settlement_order_id", order.id);
+
+  const { error: deleteError } = await supabase.from("orders").delete().eq("id", order.id);
+
+  if (deleteError) {
+    redirect(buildAdminRedirect("orders", "Order delete failed.", "error"));
+  }
+
+  revalidateAppPaths(parsed.data.listingSlug);
+  redirect(buildAdminRedirect("orders", "Order deleted."));
 }

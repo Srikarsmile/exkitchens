@@ -1,7 +1,10 @@
 import Link from "next/link";
+import DangerSubmitButton from "@/app/admin/DangerSubmitButton";
 import {
   cancelAuctionAction,
   closeAuctionAction,
+  deleteOrderAction,
+  deleteUserAction,
   updateListingSellerAction,
   updateListingStatusAction,
   updateOrderStatusAction,
@@ -28,8 +31,19 @@ import {
   formatTimeRemaining,
 } from "@/lib/marketplace-shared";
 
-export default async function AdminPage() {
+interface AdminPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function getSingleSearchParam(
+  value: string | string[] | undefined,
+) {
+  return typeof value === "string" ? value : undefined;
+}
+
+export default async function AdminPage({ searchParams }: AdminPageProps) {
   const viewer = await requireAdmin("/admin");
+  const resolvedSearchParams = await searchParams;
   const currentAdminLabel =
     viewer.profile?.full_name && (viewer.profile?.email || viewer.user.email)
       ? `${viewer.profile.full_name} (${viewer.profile.email || viewer.user.email})`
@@ -46,6 +60,11 @@ export default async function AdminPage() {
     getSellerOptions(),
   ]);
   const unreadAdminNotifications = notifications.filter((item) => !item.readAt).length;
+  const flashMessage = getSingleSearchParam(resolvedSearchParams.message);
+  const flashTone =
+    getSingleSearchParam(resolvedSearchParams.messageType) === "error"
+      ? "error"
+      : "success";
 
   return (
     <main id="main-content" className="mx-auto w-full max-w-7xl px-6 py-12">
@@ -83,6 +102,18 @@ export default async function AdminPage() {
           </Link>
         </div>
       </div>
+
+      {flashMessage ? (
+        <div
+          className={`mb-8 rounded-[1.5rem] border px-5 py-4 text-sm ${
+            flashTone === "error"
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-green-200 bg-green-50 text-green-700"
+          }`}
+        >
+          {flashMessage}
+        </div>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-5">
         {[
@@ -350,6 +381,20 @@ export default async function AdminPage() {
                         Save access
                       </button>
                     </form>
+                    {user.role !== "admin" ? (
+                      <form action={deleteUserAction} className="mt-3">
+                        <input type="hidden" name="profileId" value={user.id} />
+                        <DangerSubmitButton
+                          label="Delete user"
+                          confirmMessage={`Delete ${user.email || user.fullName || "this user"} and any terminal orders tied to that account? This cannot be undone.`}
+                          className="rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition hover:border-red-300 hover:bg-red-50"
+                        />
+                      </form>
+                    ) : (
+                      <p className="mt-3 text-xs text-gray-400">
+                        Admin accounts are protected from deletion here.
+                      </p>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -469,6 +514,26 @@ export default async function AdminPage() {
                         {formatOrderStatus(order.status)}
                       </p>
                     </form>
+                    {["cancelled", "refunded"].includes(order.status) ||
+                    (order.status === "awaiting_payment" && order.kind === "buy_now") ? (
+                      <form action={deleteOrderAction} className="mt-3">
+                        <input type="hidden" name="orderId" value={order.id} />
+                        <input
+                          type="hidden"
+                          name="listingSlug"
+                          value={order.listingSlug || ""}
+                        />
+                        <DangerSubmitButton
+                          label="Delete order"
+                          confirmMessage={`Delete order ${order.id.slice(0, 8)}? This removes the record permanently.`}
+                          className="rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition hover:border-red-300 hover:bg-red-50"
+                        />
+                      </form>
+                    ) : (
+                      <p className="mt-3 text-xs text-gray-400">
+                        Delete becomes available after the order is cancelled or refunded.
+                      </p>
+                    )}
                   </td>
                   <td className="rounded-r-2xl px-4 py-4 align-top">
                     <p>{formatDateTime(order.dueAt)}</p>
