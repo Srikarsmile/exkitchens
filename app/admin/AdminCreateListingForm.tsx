@@ -1,12 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState, type ChangeEvent } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { createListingAction, type AdminActionState } from "@/app/actions/admin";
 import SubmitButton from "@/app/components/forms/SubmitButton";
 import type { SellerOption } from "@/lib/marketplace-shared";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
 const initialState: AdminActionState = {};
+const LISTING_IMAGE_BUCKET = "listing-images";
 
 interface AdminCreateListingFormProps {
   sellerOptions: SellerOption[];
@@ -15,6 +24,26 @@ interface AdminCreateListingFormProps {
 interface PreviewImage {
   name: string;
   url: string;
+}
+
+interface ListingImageUploadFile {
+  name: string;
+  type: string;
+  size: number;
+}
+
+interface ListingImageUploadTarget {
+  path: string;
+  token: string;
+  publicUrl: string;
+}
+
+function slugify(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function Section({
@@ -105,12 +134,14 @@ function UploadPanel({
   inputName,
   multiple = false,
   onChange,
+  inputRef,
 }: {
   title: string;
   description: string;
   inputName: string;
   multiple?: boolean;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
     <label className="block cursor-pointer rounded-[1.25rem] border border-dashed border-[#b7c7b7] bg-white px-5 py-6 transition hover:border-[#3d7a44] hover:bg-[#f7faf7]">
@@ -120,6 +151,7 @@ function UploadPanel({
         {multiple ? "Choose images" : "Choose image"}
       </span>
       <input
+        ref={inputRef}
         type="file"
         name={inputName}
         accept="image/*"
@@ -141,6 +173,16 @@ export default function AdminCreateListingForm({
   const [auctionStartsAtOffsetMinutes, setAuctionStartsAtOffsetMinutes] =
     useState("");
   const [auctionEndsAtOffsetMinutes, setAuctionEndsAtOffsetMinutes] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isPreparingUpload, setIsPreparingUpload] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const heroInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const uploadedHeroUrlRef = useRef<HTMLInputElement>(null);
+  const uploadedGalleryUrlsRef = useRef<HTMLInputElement>(null);
+  const uploadedHeroPathRef = useRef<HTMLInputElement>(null);
+  const uploadedGalleryPathsRef = useRef<HTMLInputElement>(null);
+  const bypassSubmitPreparationRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -151,6 +193,8 @@ export default function AdminCreateListingForm({
 
   function handleHeroChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
+    clearUploadedImageFields();
+    setUploadError(null);
 
     setHeroPreview((previous) => {
       previous.forEach((item) => URL.revokeObjectURL(item.url));
@@ -165,6 +209,8 @@ export default function AdminCreateListingForm({
 
   function handleGalleryChange(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.currentTarget.files || []);
+    clearUploadedImageFields();
+    setUploadError(null);
 
     setGalleryPreviews((previous) => {
       previous.forEach((item) => URL.revokeObjectURL(item.url));
@@ -189,8 +235,203 @@ export default function AdminCreateListingForm({
     return String(parsed.getTimezoneOffset());
   }
 
+  function clearUploadedImageFields() {
+    if (uploadedHeroUrlRef.current) {
+      uploadedHeroUrlRef.current.value = "";
+    }
+
+    if (uploadedGalleryUrlsRef.current) {
+      uploadedGalleryUrlsRef.current.value = "";
+    }
+
+    if (uploadedHeroPathRef.current) {
+      uploadedHeroPathRef.current.value = "";
+    }
+
+    if (uploadedGalleryPathsRef.current) {
+      uploadedGalleryPathsRef.current.value = "";
+    }
+  }
+
+  async function cleanupUploadedPaths(paths: string[]) {
+    if (paths.length === 0) {
+      return;
+    }
+
+    await fetch("/api/admin/listing-images", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ paths }),
+    }).catch(() => undefined);
+  }
+
+  async function prepareDirectUploads() {
+    const heroFile = heroInputRef.current?.files?.[0] ?? null;
+    const galleryFiles = Array.from(galleryInputRef.current?.files ?? []);
+
+    if (!heroFile && galleryFiles.length === 0) {
+      return;
+    }
+
+    const form = formRef.current;
+    const title = form?.elements.namedItem("title");
+    const slugField = form?.elements.namedItem("slug");
+    const rawTitle =
+      title instanceof HTMLInputElement ? title.value : "";
+    const rawSlug =
+      slugField instanceof HTMLInputElement ? slugField.value : "";
+    const listingSlug = slugify(rawSlug || rawTitle);
+
+    if (!listingSlug) {
+      throw new Error("Add a title before uploading images.");
+    }
+
+    const response = await fetch("/api/admin/listing-images", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        listingSlug,
+        heroFile: heroFile
+          ? {
+              name: heroFile.name,
+              type: heroFile.type,
+              size: heroFile.size,
+            }
+          : null,
+        galleryFiles: galleryFiles.map<ListingImageUploadFile>((file) => ({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+        })),
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | {
+          ok?: boolean;
+          message?: string;
+          hero?: ListingImageUploadTarget | null;
+          gallery?: ListingImageUploadTarget[];
+        }
+      | null;
+
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.message || "Could not prepare image upload.");
+    }
+
+    const supabase = createSupabaseClient();
+    const uploadedPaths: string[] = [];
+
+    try {
+      if (heroFile) {
+        if (!payload.hero) {
+          throw new Error("The hero image upload target is missing.");
+        }
+
+        const { error } = await supabase.storage
+          .from(LISTING_IMAGE_BUCKET)
+          .uploadToSignedUrl(payload.hero.path, payload.hero.token, heroFile, {
+            cacheControl: "3600",
+            contentType: heroFile.type || "application/octet-stream",
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        uploadedPaths.push(payload.hero.path);
+
+        if (uploadedHeroUrlRef.current) {
+          uploadedHeroUrlRef.current.value = payload.hero.publicUrl;
+        }
+
+        if (uploadedHeroPathRef.current) {
+          uploadedHeroPathRef.current.value = payload.hero.path;
+        }
+      }
+
+      const galleryTargets = payload.gallery ?? [];
+
+      if (galleryTargets.length !== galleryFiles.length) {
+        throw new Error("The gallery image upload targets do not match the selected files.");
+      }
+
+      for (const [index, file] of galleryFiles.entries()) {
+        const target = galleryTargets[index];
+        const { error } = await supabase.storage
+          .from(LISTING_IMAGE_BUCKET)
+          .uploadToSignedUrl(target.path, target.token, file, {
+            cacheControl: "3600",
+            contentType: file.type || "application/octet-stream",
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        uploadedPaths.push(target.path);
+      }
+
+      if (uploadedGalleryUrlsRef.current) {
+        uploadedGalleryUrlsRef.current.value = galleryTargets
+          .map((target) => target.publicUrl)
+          .join("\n");
+      }
+
+      if (uploadedGalleryPathsRef.current) {
+        uploadedGalleryPathsRef.current.value = galleryTargets
+          .map((target) => target.path)
+          .join("\n");
+      }
+
+      if (heroInputRef.current) {
+        heroInputRef.current.value = "";
+      }
+
+      if (galleryInputRef.current) {
+        galleryInputRef.current.value = "";
+      }
+    } catch (error) {
+      clearUploadedImageFields();
+      await cleanupUploadedPaths(uploadedPaths);
+      throw error;
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (bypassSubmitPreparationRef.current) {
+      bypassSubmitPreparationRef.current = false;
+      return;
+    }
+
+    event.preventDefault();
+    setUploadError(null);
+    setIsPreparingUpload(true);
+
+    try {
+      await prepareDirectUploads();
+      bypassSubmitPreparationRef.current = true;
+      formRef.current?.requestSubmit();
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "Image upload failed. Try again.",
+      );
+    } finally {
+      setIsPreparingUpload(false);
+    }
+  }
+
   return (
-    <form action={action} encType="multipart/form-data" className="space-y-8">
+    <form
+      ref={formRef}
+      action={action}
+      encType="multipart/form-data"
+      className="space-y-8"
+      onSubmit={handleSubmit}
+    >
       <input
         type="hidden"
         name="auctionStartsAtOffsetMinutes"
@@ -201,6 +442,10 @@ export default function AdminCreateListingForm({
         name="auctionEndsAtOffsetMinutes"
         value={auctionEndsAtOffsetMinutes}
       />
+      <input ref={uploadedHeroUrlRef} type="hidden" name="uploadedHeroImageUrl" />
+      <input ref={uploadedGalleryUrlsRef} type="hidden" name="uploadedGalleryUrls" />
+      <input ref={uploadedHeroPathRef} type="hidden" name="uploadedHeroImagePath" />
+      <input ref={uploadedGalleryPathsRef} type="hidden" name="uploadedGalleryPaths" />
 
       <div className="rounded-[1.5rem] bg-[#111111] px-6 py-6 text-white">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#afcdb2]">
@@ -227,6 +472,7 @@ export default function AdminCreateListingForm({
             description="This is the main image buyers see first on cards and on the listing page."
             inputName="heroImageFile"
             onChange={handleHeroChange}
+            inputRef={heroInputRef}
           />
           <UploadPanel
             title="Gallery images"
@@ -234,6 +480,7 @@ export default function AdminCreateListingForm({
             inputName="galleryImageFiles"
             multiple
             onChange={handleGalleryChange}
+            inputRef={galleryInputRef}
           />
         </div>
 
@@ -528,6 +775,12 @@ export default function AdminCreateListingForm({
         </div>
       </Section>
 
+      {uploadError ? (
+        <div className="rounded-[1.25rem] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+          <p>{uploadError}</p>
+        </div>
+      ) : null}
+
       {state.message ? (
         <div
           className={`rounded-[1.25rem] px-5 py-4 text-sm ${
@@ -565,8 +818,9 @@ export default function AdminCreateListingForm({
         </div>
         <SubmitButton
           idleLabel="Create listing"
-          pendingLabel="Uploading and creating..."
+          pendingLabel={isPreparingUpload ? "Uploading images..." : "Creating listing..."}
           className="rounded-full bg-[#1a1a1a] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b] disabled:cursor-not-allowed disabled:opacity-70"
+          pendingOverride={isPreparingUpload || undefined}
         />
       </div>
     </form>

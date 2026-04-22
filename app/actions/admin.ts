@@ -32,6 +32,10 @@ const createListingSchema = z.object({
   summary: z.string().trim().min(10, "Add a short summary."),
   description: z.string().trim().optional(),
   location: z.string().trim().optional(),
+  uploadedHeroImageUrl: z.string().trim().optional(),
+  uploadedGalleryUrls: z.string().optional(),
+  uploadedHeroImagePath: z.string().trim().optional(),
+  uploadedGalleryPaths: z.string().optional(),
   heroImageUrl: z
     .string()
     .trim()
@@ -161,6 +165,18 @@ function revalidateAppPaths(slug?: string | null) {
   }
 }
 
+async function cleanupListingImages(paths: string[]) {
+  if (paths.length === 0) {
+    return;
+  }
+
+  try {
+    await removeListingImages(paths);
+  } catch {
+    // Cleanup is best-effort and should not replace the original failure.
+  }
+}
+
 export async function createListingAction(
   _prevState: AdminActionState,
   formData: FormData,
@@ -179,6 +195,10 @@ export async function createListingAction(
     summary: formData.get("summary"),
     description: formData.get("description"),
     location: formData.get("location"),
+    uploadedHeroImageUrl: formData.get("uploadedHeroImageUrl"),
+    uploadedGalleryUrls: formData.get("uploadedGalleryUrls"),
+    uploadedHeroImagePath: formData.get("uploadedHeroImagePath"),
+    uploadedGalleryPaths: formData.get("uploadedGalleryPaths"),
     heroImageUrl: formData.get("heroImageUrl"),
     galleryUrls: formData.get("galleryUrls"),
     tags: formData.get("tags"),
@@ -217,8 +237,13 @@ export async function createListingAction(
     data.auctionEndsAt,
     data.auctionEndsAtOffsetMinutes,
   );
+  let uploadedPaths = [
+    ...(data.uploadedHeroImagePath ? [data.uploadedHeroImagePath] : []),
+    ...normaliseGalleryUrls(data.uploadedGalleryPaths),
+  ];
 
   if (data.auctionStartsAt && !auctionStartsAt) {
+    await cleanupListingImages(uploadedPaths);
     return {
       message:
         "Auction start time is not valid. Pick the date again so the timezone can be captured.",
@@ -226,21 +251,25 @@ export async function createListingAction(
   }
 
   if (data.auctionEndsAt && !auctionEndsAt) {
+    await cleanupListingImages(uploadedPaths);
     return {
       message:
         "Auction end time is not valid. Pick the date again so the timezone can be captured.",
     };
   }
 
-  let uploadedPaths: string[] = [];
-  let heroImageUrl = data.heroImageUrl || null;
-  let galleryImageUrls = normaliseGalleryUrls(data.galleryUrls);
+  let heroImageUrl = data.uploadedHeroImageUrl || data.heroImageUrl || null;
+  let galleryImageUrls = [
+    ...normaliseGalleryUrls(data.uploadedGalleryUrls),
+    ...normaliseGalleryUrls(data.galleryUrls),
+  ];
 
   const invalidHostedImageUrls = [heroImageUrl, ...galleryImageUrls].filter(
     (value): value is string => Boolean(value && !isAllowedListingImageUrl(value)),
   );
 
   if (invalidHostedImageUrls.length > 0) {
+    await cleanupListingImages(uploadedPaths);
     return {
       message: getListingImageHostPolicyMessage(),
     };
@@ -254,10 +283,11 @@ export async function createListingAction(
         galleryFiles,
       });
 
-      uploadedPaths = uploaded.uploadedPaths;
+      uploadedPaths = [...uploadedPaths, ...uploaded.uploadedPaths];
       heroImageUrl = uploaded.heroImageUrl || heroImageUrl;
       galleryImageUrls = [...uploaded.galleryImageUrls, ...galleryImageUrls];
     } catch (error) {
+      await cleanupListingImages(uploadedPaths);
       return {
         message:
           error instanceof Error
@@ -296,7 +326,7 @@ export async function createListingAction(
   });
 
   if (error) {
-    await removeListingImages(uploadedPaths);
+    await cleanupListingImages(uploadedPaths);
     return { message: error.message };
   }
 
