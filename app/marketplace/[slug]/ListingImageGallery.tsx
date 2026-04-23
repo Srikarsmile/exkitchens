@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
 import { withListingImageVersion } from "@/lib/listing-image-url";
@@ -38,6 +38,7 @@ export default function ListingImageGallery({
   );
   const heroBlurDataUrl = getShimmerBlurDataUrl(1600, 960);
   const galleryBlurDataUrl = getShimmerBlurDataUrl(640, 480);
+  const preloadedLightboxImages = useRef(new Set<string>());
 
   const openPreviousImage = () => {
     setActiveIndex((currentIndex) =>
@@ -98,7 +99,7 @@ export default function ListingImageGallery({
       return;
     }
 
-    const preloadIndexes =
+    const priorityIndexes =
       images.length === 1
         ? [activeIndex]
         : [
@@ -106,12 +107,35 @@ export default function ListingImageGallery({
             getNextImageIndex(activeIndex, images.length),
             getPreviousImageIndex(activeIndex, images.length),
           ];
+    const priorityIndexSet = new Set(priorityIndexes);
+    const remainingIndexes = images
+      .map((_, index) => index)
+      .filter((index) => !priorityIndexSet.has(index));
 
-    for (const index of Array.from(new Set(preloadIndexes))) {
+    const preloadImage = (imageUrl: string) => {
+      const resolvedImageUrl = withListingImageVersion(imageUrl);
+
+      if (preloadedLightboxImages.current.has(resolvedImageUrl)) {
+        return;
+      }
+
+      preloadedLightboxImages.current.add(resolvedImageUrl);
       const preloadedImage = new window.Image();
       preloadedImage.decoding = "async";
-      preloadedImage.src = withListingImageVersion(images[index]);
+      preloadedImage.src = resolvedImageUrl;
+    };
+
+    for (const index of Array.from(priorityIndexSet)) {
+      preloadImage(images[index]);
     }
+
+    const preloadRestTimeout = window.setTimeout(() => {
+      for (const index of remainingIndexes) {
+        preloadImage(images[index]);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(preloadRestTimeout);
   }, [activeIndex, images]);
 
   const activeImage = activeIndex === null ? null : images[activeImageIndex];
