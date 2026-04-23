@@ -3,12 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
+import { withListingImageVersion } from "@/lib/listing-image-url";
 import ListingImage from "@/app/components/ListingImage";
 
 interface ListingImageGalleryProps {
   title: string;
   heroImage: string;
   galleryImages: string[];
+}
+
+function getPreviousImageIndex(index: number, imageCount: number) {
+  return (index - 1 + imageCount) % imageCount;
+}
+
+function getNextImageIndex(index: number, imageCount: number) {
+  return (index + 1) % imageCount;
 }
 
 export default function ListingImageGallery({
@@ -30,6 +39,19 @@ export default function ListingImageGallery({
   const heroBlurDataUrl = getShimmerBlurDataUrl(1600, 960);
   const galleryBlurDataUrl = getShimmerBlurDataUrl(640, 480);
 
+  const openPreviousImage = () => {
+    setActiveIndex((currentIndex) =>
+      currentIndex === null
+        ? images.length - 1
+        : getPreviousImageIndex(currentIndex, images.length),
+    );
+  };
+  const openNextImage = () => {
+    setActiveIndex((currentIndex) =>
+      currentIndex === null ? 0 : getNextImageIndex(currentIndex, images.length),
+    );
+  };
+
   useEffect(() => {
     if (activeIndex === null) {
       return undefined;
@@ -50,7 +72,7 @@ export default function ListingImageGallery({
 
       if (event.key === "ArrowRight") {
         setActiveIndex((currentIndex) =>
-          currentIndex === null ? 0 : (currentIndex + 1) % images.length,
+          currentIndex === null ? 0 : getNextImageIndex(currentIndex, images.length),
         );
       }
 
@@ -58,7 +80,7 @@ export default function ListingImageGallery({
         setActiveIndex((currentIndex) =>
           currentIndex === null
             ? images.length - 1
-            : (currentIndex - 1 + images.length) % images.length,
+            : getPreviousImageIndex(currentIndex, images.length),
         );
       }
     };
@@ -69,6 +91,27 @@ export default function ListingImageGallery({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
+  }, [activeIndex, images.length]);
+
+  useEffect(() => {
+    if (activeIndex === null || images.length === 0) {
+      return;
+    }
+
+    const preloadIndexes =
+      images.length === 1
+        ? [activeIndex]
+        : [
+            activeIndex,
+            getNextImageIndex(activeIndex, images.length),
+            getPreviousImageIndex(activeIndex, images.length),
+          ];
+
+    for (const index of Array.from(new Set(preloadIndexes))) {
+      const preloadedImage = new window.Image();
+      preloadedImage.decoding = "async";
+      preloadedImage.src = withListingImageVersion(images[index]);
+    }
   }, [activeIndex, images]);
 
   const activeImage = activeIndex === null ? null : images[activeImageIndex];
@@ -86,7 +129,7 @@ export default function ListingImageGallery({
             src={heroImage}
             alt={title}
             fill
-            priority
+            preload
             sizes="100vw"
             quality={75}
             placeholder="blur"
@@ -177,12 +220,11 @@ export default function ListingImageGallery({
                   src={activeImage}
                   alt={`${title} enlarged image ${activeImageIndex + 1}`}
                   fill
-                  sizes="100vw"
-                  quality={75}
-                  placeholder="blur"
-                  blurDataURL={heroBlurDataUrl}
+                  unoptimized
                   className="object-contain"
-                  priority
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
                 />
               </div>
 
@@ -190,13 +232,7 @@ export default function ListingImageGallery({
                 <>
                   <button
                     type="button"
-                    onClick={() =>
-                      setActiveIndex((currentIndex) =>
-                        currentIndex === null
-                          ? images.length - 1
-                          : (currentIndex - 1 + images.length) % images.length,
-                      )
-                    }
+                    onClick={openPreviousImage}
                     className="absolute left-3 top-1/2 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white transition hover:bg-black/60"
                     aria-label="Previous image"
                   >
@@ -205,11 +241,7 @@ export default function ListingImageGallery({
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setActiveIndex((currentIndex) =>
-                        currentIndex === null ? 0 : (currentIndex + 1) % images.length,
-                      )
-                    }
+                    onClick={openNextImage}
                     className="absolute right-3 top-1/2 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white transition hover:bg-black/60"
                     aria-label="Next image"
                   >
