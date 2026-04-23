@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Phone } from "lucide-react";
 import Image from "next/image";
@@ -10,8 +9,25 @@ interface SellCTAProps {
   splineUrl?: string | null;
 }
 
+const supportPhone =
+  process.env.NEXT_PUBLIC_MARKETPLACE_SUPPORT_PHONE || "07913546586";
+
+function getSupportPhoneHref(phone: string) {
+  const digits = phone.trim().replace(/[^\d+]/g, "");
+
+  if (digits.startsWith("+")) {
+    return `tel:${digits}`;
+  }
+
+  if (digits.startsWith("0")) {
+    return `tel:+44${digits.slice(1)}`;
+  }
+
+  return `tel:${digits}`;
+}
+
 export default function SellCTA({ splineUrl }: SellCTAProps) {
-  const [toast, setToast] = useState<string | null>(null);
+  const supportPhoneHref = getSupportPhoneHref(supportPhone);
   const imageFallback = (
     <div className="relative w-full h-full min-h-[400px] rounded-2xl overflow-hidden">
       <Image
@@ -54,15 +70,18 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
 
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-10">
               <a
-                href="#sell"
-                onClick={(e) => { e.preventDefault(); setToast("Call 123 456 789 for a free valuation."); setTimeout(() => setToast(null), 3500); }}
+                href={supportPhoneHref}
                 className="px-8 py-4 rounded-full bg-white text-[#1a1a1a] font-medium tracking-wide hover:bg-[#3d7a44] hover:text-white transition-all flex items-center gap-3 group"
               >
                 Get a Free Valuation
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </a>
-              <div className="flex items-center gap-3 text-white/40">
-                <div className="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center">
+              <a
+                href={supportPhoneHref}
+                aria-label={`Call ExKitchens on ${supportPhone}`}
+                className="group flex items-center gap-3 rounded-full border border-white/10 px-4 py-3 text-white/45 transition hover:border-[#5a9c64]/50 hover:bg-white/5 hover:text-white"
+              >
+                <div className="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center transition group-hover:border-[#5a9c64]/60 group-hover:text-[#8bcf93]">
                   <Phone className="w-4 h-4" />
                 </div>
                 <div>
@@ -70,10 +89,10 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
                     Call Us
                   </span>
                   <span className="text-white/70 text-sm font-medium">
-                    Coming Soon
+                    {supportPhone}
                   </span>
                 </div>
-              </div>
+              </a>
             </div>
 
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-5 text-white/25 text-xs tracking-wide">
@@ -99,12 +118,6 @@ export default function SellCTA({ splineUrl }: SellCTAProps) {
           </motion.div>
         </div>
       </div>
-
-      {toast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full bg-[#1a1a1a] text-white text-sm font-medium shadow-xl border border-white/10">
-          {toast}
-        </div>
-      )}
     </section>
   );
 }
