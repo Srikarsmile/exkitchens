@@ -10,6 +10,8 @@ export type OrderStatus =
   | "fulfilled"
   | "cancelled"
   | "refunded";
+export type ListingCondition = "used" | "ex_display";
+export type ListingEnquiryStatus = "new" | "contacted" | "closed";
 
 export interface AuctionSnapshot {
   id: string;
@@ -99,7 +101,10 @@ export interface NotificationItem {
   readAt: string | null;
 }
 
-export const ADMIN_NOTIFICATION_KINDS = ["order_created"] as const;
+export const ADMIN_NOTIFICATION_KINDS = [
+  "order_created",
+  "listing_enquiry",
+] as const;
 
 export function isAdminNotificationKind(kind: string) {
   return ADMIN_NOTIFICATION_KINDS.includes(
@@ -142,6 +147,22 @@ export interface AdminOrderRecord extends OrderSummary {
   sellerEmail: string | null;
 }
 
+export interface AdminEnquiryRecord {
+  id: string;
+  listingId: string | null;
+  listingSlug: string | null;
+  listingTitle: string | null;
+  fullName: string;
+  email: string;
+  phone: string;
+  note: string | null;
+  requestServices: boolean;
+  status: ListingEnquiryStatus;
+  adminNote: string | null;
+  createdAt: string;
+  acknowledgedAt: string | null;
+}
+
 export function formatMoney(pence: number | null | undefined) {
   if (pence == null) {
     return "TBC";
@@ -168,7 +189,9 @@ export function calculatePercentageOff(
     return null;
   }
 
-  return Math.round(((originalPricePence - offerPricePence) / originalPricePence) * 100);
+  return Math.round(
+    ((originalPricePence - offerPricePence) / originalPricePence) * 100,
+  );
 }
 
 export function formatTimeRemaining(endAt: string | null | undefined) {
@@ -245,4 +268,84 @@ export function bidAmountToPence(value: string | number) {
   }
 
   return Math.round(numeric * 100);
+}
+
+export function getListingConditionTag(
+  condition: ListingCondition | null | undefined,
+) {
+  switch (condition) {
+    case "used":
+      return "condition:used";
+    case "ex_display":
+      return "condition:ex-display";
+    default:
+      return null;
+  }
+}
+
+export function stripListingConditionTags(tags: string[]) {
+  return tags.filter(
+    (tag) =>
+      !/^(condition:used|condition:ex-display|used|pre-loved|pre loved|preloved|pre-owned|pre owned|ex-display|ex display)$/i.test(
+        tag.trim(),
+      ),
+  );
+}
+
+export function getVisibleListingTags(tags: string[]) {
+  const seen = new Set<string>();
+
+  return stripListingConditionTags(tags)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .filter((tag) => {
+      const key = tag.toLowerCase();
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+}
+
+export function getListingCondition(
+  ...inputs: Array<string | null | undefined>
+) {
+  const content = inputs.join(" ").toLowerCase();
+
+  if (
+    /\b(condition:used|used|pre-loved|pre loved|preloved|pre-owned|pre owned)\b/.test(
+      content,
+    )
+  ) {
+    return "used" as const;
+  }
+
+  if (
+    /\b(condition:ex-display|condition:ex display|ex-display|ex display|display kitchen|display model|showroom)\b/.test(
+      content,
+    )
+  ) {
+    return "ex_display" as const;
+  }
+
+  return null;
+}
+
+export function getListingConditionLabel(
+  ...inputs: Array<string | null | undefined>
+) {
+  const condition = getListingCondition(...inputs);
+
+  if (condition === "used") {
+    return "Used";
+  }
+
+  if (condition === "ex_display") {
+    return "Ex-display";
+  }
+
+  return null;
 }

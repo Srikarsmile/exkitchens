@@ -7,6 +7,10 @@ import {
   resetRateLimitStore,
   takeRateLimitToken,
 } from "../lib/request-guards.ts";
+import {
+  getListingConditionLabel,
+  getVisibleListingTags,
+} from "../lib/marketplace-shared.ts";
 import { buildHomePageStructuredData } from "../lib/seo.ts";
 
 test("getClientAddress prefers the first forwarded address", () => {
@@ -90,5 +94,31 @@ test("buildHomePageStructuredData avoids hard-coded review claims", () => {
   assert.equal(
     structuredData.some((entry) => "aggregateRating" in entry),
     false,
+  );
+});
+
+test("getListingConditionLabel recognises used kitchens", () => {
+  assert.equal(
+    getListingConditionLabel("Used kitchen", "Pre-loved shaker kitchen"),
+    "Used",
+  );
+});
+
+test("getListingConditionLabel recognises ex-display kitchens", () => {
+  assert.equal(
+    getListingConditionLabel("Rotpunkt display kitchen", "showroom stock"),
+    "Ex-display",
+  );
+});
+
+test("getVisibleListingTags removes structured condition tags", () => {
+  assert.deepEqual(
+    getVisibleListingTags([
+      "condition:ex-display",
+      "Dekton",
+      "Island",
+      "dekton",
+    ]),
+    ["Dekton", "Island"],
   );
 });

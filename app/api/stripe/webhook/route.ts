@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 import {
   getStripeEnv,
   isStripeConfigured,
@@ -64,7 +65,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const supabase = createAdminClient();
   const { data: order } = await supabase
     .from("orders")
-    .select("id, status, listing_id, buyer_profile_id, seller_profile_id")
+    .select(
+      "id, status, listing_id, buyer_profile_id, seller_profile_id, amount_pence, listings!orders_listing_id_fkey(title, slug), buyer:profiles!orders_buyer_profile_id_fkey(full_name, email)",
+    )
     .eq("id", orderId)
     .maybeSingle();
 
@@ -98,6 +101,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     entity_id: string;
     data: {
       listing_id: string;
+      listing_slug?: string | null;
       status: string;
     };
   }> = [];
@@ -112,6 +116,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       entity_id: orderId,
       data: {
         listing_id: order.listing_id,
+        listing_slug: getListingSlug(order.listings),
         status: "paid",
       },
     });
@@ -127,6 +132,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       entity_id: orderId,
       data: {
         listing_id: order.listing_id,
+        listing_slug: getListingSlug(order.listings),
         status: "paid",
       },
     });
@@ -134,6 +140,29 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (notifications.length > 0) {
     await supabase.from("notifications").insert(notifications);
+  }
+
+  const buyerProfile = Array.isArray(order.buyer) ? order.buyer[0] : order.buyer;
+  const recipientEmail =
+    session.customer_details?.email?.trim() || buyerProfile?.email?.trim();
+  const listingTitle = getListingTitle(order.listings);
+
+  if (recipientEmail && listingTitle) {
+    try {
+      const result = await sendOrderConfirmationEmail({
+        recipientEmail,
+        recipientName: buyerProfile?.full_name ?? null,
+        listingTitle,
+        amountPence: order.amount_pence,
+        orderId,
+      });
+
+      if (result.error) {
+        console.error("Order confirmation email failed after checkout", result.error);
+      }
+    } catch (error) {
+      console.error("Order confirmation email threw after checkout", error);
+    }
   }
 }
 
@@ -151,6 +180,28 @@ function getCheckoutPaymentNotes(session: Stripe.Checkout.Session) {
   }
 
   return notes.join("\n");
+}
+
+function getListingSlug(
+  listing:
+    | { slug: string | null; title: string | null }
+    | { slug: string | null; title: string | null }[]
+    | null
+    | undefined,
+) {
+  const item = Array.isArray(listing) ? listing[0] : listing;
+  return item?.slug ?? null;
+}
+
+function getListingTitle(
+  listing:
+    | { slug: string | null; title: string | null }
+    | { slug: string | null; title: string | null }[]
+    | null
+    | undefined,
+) {
+  const item = Array.isArray(listing) ? listing[0] : listing;
+  return item?.title ?? null;
 }
 
 async function handleCheckoutExpired(session: Stripe.Checkout.Session) {

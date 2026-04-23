@@ -48,29 +48,29 @@ export default function BuyNowCard({
           {previewOnly ? "Buy now preview" : "Buy now"}
         </h2>
         <p className="mt-2 text-sm text-gray-500">
-          Reserve this kitchen straight away and complete the next step without
-          leaving the marketplace. Your order stays visible in your account after
-          payment.
+          Reserve this kitchen straight away with secure checkout. If you want a
+          callback first, use the enquiry form below and the Ex Kitchens team will
+          contact you.
         </p>
       </div>
 
       <div className="rounded-[1.5rem] bg-[#f7f7f4] px-4 py-4">
-        <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+        <p className="text-xs uppercase tracking-[0.24em] text-gray-400">
           Offer price
         </p>
-        <div className="mt-2 flex flex-wrap items-end gap-3">
-          <p className="text-3xl font-medium text-gray-900">
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <p className="text-4xl font-medium text-gray-900">
             {formatMoney(amountPence)}
           </p>
           {originalPricePence ? (
-            <p className="text-sm text-gray-400 line-through">
+            <p className="text-base text-gray-400 line-through">
               RRP {formatMoney(originalPricePence)}
             </p>
           ) : null}
         </div>
         {discountPercent ? (
-          <p className="mt-2 text-sm font-medium text-[#3d7a44]">
-            Available at {discountPercent}% off retail
+          <p className="mt-3 inline-flex rounded-full bg-[#e8f3e9] px-3 py-1 text-sm font-medium text-[#3d7a44]">
+            {discountPercent}% off retail
           </p>
         ) : null}
       </div>

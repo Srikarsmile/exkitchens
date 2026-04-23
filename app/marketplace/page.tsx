@@ -9,6 +9,8 @@ import {
   calculatePercentageOff,
   formatMoney,
   formatTimeRemaining,
+  getListingConditionLabel,
+  getVisibleListingTags,
 } from "@/lib/marketplace-shared";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
@@ -19,10 +21,12 @@ const cardBlurDataUrl = getShimmerBlurDataUrl(720, 540);
 export const metadata: Metadata = {
   title: "Marketplace | ExKitchens",
   description:
-    "Browse published ExKitchens listings, follow live auctions, and review fixed-price kitchens ready for checkout.",
+    "Browse published ExKitchens listings, follow live auctions, and enquire directly about fixed-price kitchens.",
 };
 
-function getListingBadge(listing: Awaited<ReturnType<typeof getMarketplaceListings>>[number]) {
+function getListingBadge(
+  listing: Awaited<ReturnType<typeof getMarketplaceListings>>[number],
+) {
   if (listing.saleType === "buy_now") {
     return "Buy now";
   }
@@ -47,7 +51,10 @@ function getListingBadge(listing: Awaited<ReturnType<typeof getMarketplaceListin
 }
 
 export default async function MarketplacePage() {
-  const [viewer, listings] = await Promise.all([getViewer(), getMarketplaceListings()]);
+  const [viewer, listings] = await Promise.all([
+    getViewer(),
+    getMarketplaceListings(),
+  ]);
 
   return (
     <main id="main-content" className="mx-auto w-full max-w-7xl px-6 py-12">
@@ -55,10 +62,7 @@ export default async function MarketplacePage() {
         channel="marketplace"
         enabled={isSupabaseConfigured()}
         pollMs={60000}
-        targets={[
-          { table: "listings" },
-          { table: "auctions" },
-        ]}
+        targets={[{ table: "listings" }, { table: "auctions" }]}
       />
 
       <section className="relative overflow-hidden rounded-[2rem] bg-[#111111]">
@@ -87,8 +91,8 @@ export default async function MarketplacePage() {
               Live auctions and fixed-price kitchens in one place
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-white/72">
-              Browse active listings, follow bidding, and move into checkout
-              without leaving the Ex Kitchens experience.
+              Browse active listings, enquire directly on fixed-price kitchens,
+              and follow live bidding in one place.
             </p>
           </div>
 
@@ -120,15 +124,18 @@ export default async function MarketplacePage() {
 
         {viewer.user && viewer.profile?.bidder_status !== "approved" ? (
           <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Your account is signed in. Bidding and buy-now checkout unlock after an
-            admin approves the profile.
+            Your account is signed in. Live bidding starts after admin approval,
+            but published buy-now kitchens can still be reserved from their
+            listing pages.
           </p>
         ) : null}
       </section>
 
       {listings.length === 0 ? (
         <div className="mt-10 rounded-[2rem] border border-dashed border-gray-200 bg-white px-8 py-16 text-center shadow-[0_20px_40px_rgba(17,17,17,0.04)]">
-          <h2 className="text-2xl font-medium text-gray-900">No listings yet</h2>
+          <h2 className="text-2xl font-medium text-gray-900">
+            No listings yet
+          </h2>
           <p className="mt-3 text-sm text-gray-500">
             Sign in as an admin and publish the first kitchen.
           </p>
@@ -144,11 +151,18 @@ export default async function MarketplacePage() {
       ) : (
         <section className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {listings.map((listing) => {
-            const buyNowPricePence = listing.buyNowPricePence ?? listing.currentPricePence;
+            const buyNowPricePence =
+              listing.buyNowPricePence ?? listing.currentPricePence;
             const buyNowDiscountPercent = calculatePercentageOff(
               listing.originalPricePence,
               buyNowPricePence,
             );
+            const listingConditionLabel = getListingConditionLabel(
+              listing.title,
+              listing.summary,
+              ...listing.tags,
+            );
+            const visibleTags = getVisibleListingTags(listing.tags);
 
             return (
               <article
@@ -157,7 +171,9 @@ export default async function MarketplacePage() {
               >
                 <div className="relative h-72 bg-[#f3f3f3]">
                   <ListingImage
-                    src={listing.heroImageUrl || "/assets/kitchen_nano_square.jpg"}
+                    src={
+                      listing.heroImageUrl || "/assets/kitchen_nano_square.jpg"
+                    }
                     alt={listing.title}
                     fill
                     sizes="(max-width: 1024px) 100vw, 33vw"
@@ -166,8 +182,15 @@ export default async function MarketplacePage() {
                     blurDataURL={cardBlurDataUrl}
                     className="object-cover"
                   />
-                  <div className="absolute left-4 top-4 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
-                    {getListingBadge(listing)}
+                  <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+                    <div className="rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
+                      {getListingBadge(listing)}
+                    </div>
+                    {listingConditionLabel ? (
+                      <div className="rounded-full bg-white/92 px-3 py-1 text-xs font-medium text-gray-700 backdrop-blur-md">
+                        {listingConditionLabel}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
@@ -184,37 +207,43 @@ export default async function MarketplacePage() {
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {listing.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-[#f4f7f4] px-3 py-1 text-xs font-medium text-[#3d7a44]"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                  {visibleTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {visibleTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full bg-[#f4f7f4] px-3 py-1 text-xs font-medium text-[#3d7a44]"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
 
                   <div className="flex items-end justify-between gap-4 border-t border-gray-100 pt-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                        {listing.saleType === "auction" ? "Current bid" : "Offer price"}
+                        {listing.saleType === "auction"
+                          ? "Current bid"
+                          : "Offer price"}
                       </p>
-                      {listing.saleType === "buy_now" && listing.originalPricePence ? (
-                        <p className="mt-1 text-xs text-gray-400 line-through">
+                      {listing.saleType === "buy_now" &&
+                      listing.originalPricePence ? (
+                        <p className="mt-1 text-sm text-gray-400 line-through">
                           RRP {formatMoney(listing.originalPricePence)}
                         </p>
                       ) : null}
-                      <p className="mt-1 text-2xl font-medium text-gray-900">
+                      <p className="mt-2 text-3xl font-medium text-gray-900">
                         {formatMoney(
                           listing.saleType === "buy_now"
                             ? buyNowPricePence
                             : listing.currentPricePence,
                         )}
                       </p>
-                      {listing.saleType === "buy_now" && buyNowDiscountPercent ? (
-                        <p className="mt-1 text-xs font-medium text-[#3d7a44]">
-                          Available at {buyNowDiscountPercent}% off retail
+                      {listing.saleType === "buy_now" &&
+                      buyNowDiscountPercent ? (
+                        <p className="mt-2 inline-flex rounded-full bg-[#e8f3e9] px-3 py-1 text-xs font-medium text-[#3d7a44]">
+                          {buyNowDiscountPercent}% off retail
                         </p>
                       ) : null}
                     </div>

@@ -18,7 +18,11 @@ import { releasePendingBuyNowOrder } from "@/lib/orders";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
-import { bidAmountToPence } from "@/lib/marketplace-shared";
+import {
+  bidAmountToPence,
+  getListingConditionTag,
+  stripListingConditionTags,
+} from "@/lib/marketplace-shared";
 import { runMarketplaceMaintenance } from "@/lib/marketplace";
 
 export interface AdminActionState {
@@ -43,10 +47,16 @@ const createListingSchema = z.object({
     .trim()
     .refine(
       (value) =>
-        !value || value.startsWith("/") || z.string().url().safeParse(value).success,
+        !value ||
+        value.startsWith("/") ||
+        z.string().url().safeParse(value).success,
       "Hero image must be a valid URL or site-relative path.",
     ),
   galleryUrls: z.string().optional(),
+  condition: z.enum(
+    ["used", "ex_display"],
+    "Choose whether this kitchen is ex-display or used.",
+  ),
   tags: z.string().optional(),
   saleType: z.enum(["auction", "buy_now"]),
   originalPrice: z.coerce.number().positive().optional(),
@@ -56,8 +66,18 @@ const createListingSchema = z.object({
   reservePrice: z.coerce.number().positive().optional(),
   auctionStartsAt: z.string().optional(),
   auctionEndsAt: z.string().optional(),
-  auctionStartsAtOffsetMinutes: z.coerce.number().int().min(-840).max(840).optional(),
-  auctionEndsAtOffsetMinutes: z.coerce.number().int().min(-840).max(840).optional(),
+  auctionStartsAtOffsetMinutes: z.coerce
+    .number()
+    .int()
+    .min(-840)
+    .max(840)
+    .optional(),
+  auctionEndsAtOffsetMinutes: z.coerce
+    .number()
+    .int()
+    .min(-840)
+    .max(840)
+    .optional(),
   sellerProfileId: z.string().uuid("Choose a seller account for this listing."),
   featured: z.boolean().optional(),
 });
@@ -79,6 +99,12 @@ const updateListingStatusSchema = z.object({
 const updateListingSellerSchema = z.object({
   listingId: z.string().uuid(),
   sellerProfileId: z.string().uuid(),
+  slug: z.string().trim().optional(),
+});
+
+const updateListingConditionSchema = z.object({
+  listingId: z.string().uuid(),
+  condition: z.enum(["used", "ex_display", "unspecified"]),
   slug: z.string().trim().optional(),
 });
 
@@ -110,6 +136,12 @@ const deleteOrderSchema = z.object({
 
 const deleteUserSchema = z.object({
   profileId: z.string().uuid(),
+});
+
+const updateEnquiryStatusSchema = z.object({
+  enquiryId: z.string().uuid(),
+  status: z.enum(["new", "contacted", "closed"]),
+  adminNote: z.string().trim().max(500).optional(),
 });
 
 function slugify(input: string) {
@@ -183,7 +215,7 @@ function revalidateAppPaths(slug?: string | null) {
 }
 
 function buildAdminRedirect(
-  section: "approvals" | "orders" | "listings",
+  section: "approvals" | "orders" | "listings" | "enquiries",
   message: string,
   tone: "success" | "error" = "success",
 ) {
@@ -231,6 +263,7 @@ export async function createListingAction(
     uploadedGalleryPaths: formData.get("uploadedGalleryPaths"),
     heroImageUrl: formData.get("heroImageUrl"),
     galleryUrls: formData.get("galleryUrls"),
+    condition: formData.get("condition"),
     tags: formData.get("tags"),
     saleType: formData.get("saleType"),
     originalPrice: formData.get("originalPrice") || undefined,
@@ -238,12 +271,16 @@ export async function createListingAction(
     startingBid: formData.get("startingBid") || undefined,
     bidIncrement: formData.get("bidIncrement") || undefined,
     reservePrice: formData.get("reservePrice") || undefined,
-    auctionStartsAt: formData.get("auctionStartsAt")?.toString().trim() || undefined,
-    auctionEndsAt: formData.get("auctionEndsAt")?.toString().trim() || undefined,
+    auctionStartsAt:
+      formData.get("auctionStartsAt")?.toString().trim() || undefined,
+    auctionEndsAt:
+      formData.get("auctionEndsAt")?.toString().trim() || undefined,
     auctionStartsAtOffsetMinutes:
-      formData.get("auctionStartsAtOffsetMinutes")?.toString().trim() || undefined,
+      formData.get("auctionStartsAtOffsetMinutes")?.toString().trim() ||
+      undefined,
     auctionEndsAtOffsetMinutes:
-      formData.get("auctionEndsAtOffsetMinutes")?.toString().trim() || undefined,
+      formData.get("auctionEndsAtOffsetMinutes")?.toString().trim() ||
+      undefined,
     sellerProfileId: formData.get("sellerProfileId")?.toString().trim(),
     featured: formData.get("featured") === "on",
   });
@@ -295,7 +332,8 @@ export async function createListingAction(
   ];
 
   const invalidHostedImageUrls = [heroImageUrl, ...galleryImageUrls].filter(
-    (value): value is string => Boolean(value && !isAllowedListingImageUrl(value)),
+    (value): value is string =>
+      Boolean(value && !isAllowedListingImageUrl(value)),
   );
 
   if (invalidHostedImageUrls.length > 0) {
@@ -328,39 +366,52 @@ export async function createListingAction(
   }
 
   const supabase = await createClient();
+  const listingTags = stripListingConditionTags(normaliseTagList(data.tags));
+  const conditionTag = getListingConditionTag(data.condition);
 
-  const { data: listingResult, error } = await supabase.rpc("create_listing_with_auction", {
-    p_title: data.title,
-    p_slug: slug,
-    p_brand: data.brand || null,
-    p_summary: data.summary,
-    p_description: data.description || null,
-    p_location: data.location || null,
-    p_hero_image_url: heroImageUrl,
-    p_gallery_urls: galleryImageUrls,
-    p_tags: normaliseTagList(data.tags),
-    p_sale_type: data.saleType,
-    p_featured: data.featured ?? false,
-    p_original_price_pence:
-      data.originalPrice != null ? bidAmountToPence(data.originalPrice) : null,
-    p_buy_now_price_pence:
-      data.buyNowPrice != null ? bidAmountToPence(data.buyNowPrice) : null,
-    p_starting_bid_pence:
-      data.startingBid != null ? bidAmountToPence(data.startingBid) : null,
-    p_bid_increment_pence: bidAmountToPence(data.bidIncrement ?? 50) ?? 5000,
-    p_reserve_price_pence:
-      data.reservePrice != null ? bidAmountToPence(data.reservePrice) : null,
-    p_auction_starts_at: auctionStartsAt,
-    p_auction_ends_at: auctionEndsAt,
-    p_seller_profile_id: data.sellerProfileId,
-  });
+  if (conditionTag) {
+    listingTags.unshift(conditionTag);
+  }
+
+  const { data: listingResult, error } = await supabase.rpc(
+    "create_listing_with_auction",
+    {
+      p_title: data.title,
+      p_slug: slug,
+      p_brand: data.brand || null,
+      p_summary: data.summary,
+      p_description: data.description || null,
+      p_location: data.location || null,
+      p_hero_image_url: heroImageUrl,
+      p_gallery_urls: galleryImageUrls,
+      p_tags: listingTags,
+      p_sale_type: data.saleType,
+      p_featured: data.featured ?? false,
+      p_original_price_pence:
+        data.originalPrice != null
+          ? bidAmountToPence(data.originalPrice)
+          : null,
+      p_buy_now_price_pence:
+        data.buyNowPrice != null ? bidAmountToPence(data.buyNowPrice) : null,
+      p_starting_bid_pence:
+        data.startingBid != null ? bidAmountToPence(data.startingBid) : null,
+      p_bid_increment_pence: bidAmountToPence(data.bidIncrement ?? 50) ?? 5000,
+      p_reserve_price_pence:
+        data.reservePrice != null ? bidAmountToPence(data.reservePrice) : null,
+      p_auction_starts_at: auctionStartsAt,
+      p_auction_ends_at: auctionEndsAt,
+      p_seller_profile_id: data.sellerProfileId,
+    },
+  );
 
   if (error) {
     await cleanupListingImages(uploadedPaths);
     return { message: error.message };
   }
 
-  const created = Array.isArray(listingResult) ? listingResult[0] : listingResult;
+  const created = Array.isArray(listingResult)
+    ? listingResult[0]
+    : listingResult;
   revalidateAppPaths(created?.listing_slug ?? slug);
 
   return {
@@ -379,7 +430,8 @@ export async function updateUserAccessAction(formData: FormData) {
     profileId: formData.get("profileId"),
     role: formData.get("role"),
     bidderStatus: formData.get("bidderStatus"),
-    bidderStatusReason: formData.get("bidderStatusReason")?.toString().trim() || undefined,
+    bidderStatusReason:
+      formData.get("bidderStatusReason")?.toString().trim() || undefined,
     phoneVerified: formData.get("phoneVerified") === "on",
   });
 
@@ -401,10 +453,9 @@ export async function updateUserAccessAction(formData: FormData) {
     role: parsed.data.role,
     bidder_status: parsed.data.bidderStatus,
     bidder_status_reason: parsed.data.bidderStatusReason || null,
-    bidder_approved_at:
-      parsed.data.bidderStatus === "approved" ? now : null,
+    bidder_approved_at: parsed.data.bidderStatus === "approved" ? now : null,
     bidder_approved_by:
-      parsed.data.bidderStatus === "approved" ? admin.user?.id ?? null : null,
+      parsed.data.bidderStatus === "approved" ? (admin.user?.id ?? null) : null,
     phone_verified_at: parsed.data.phoneVerified
       ? currentProfile?.phone_verified_at || now
       : null,
@@ -454,7 +505,13 @@ export async function deleteUserAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirect(buildAdminRedirect("approvals", "Invalid user deletion request.", "error"));
+    redirect(
+      buildAdminRedirect(
+        "approvals",
+        "Invalid user deletion request.",
+        "error",
+      ),
+    );
   }
 
   await requireAdmin("/admin");
@@ -669,6 +726,124 @@ export async function updateListingSellerAction(formData: FormData) {
   revalidateAppPaths(parsed.data.slug);
 }
 
+export async function updateListingConditionAction(formData: FormData) {
+  if (!isSupabaseConfigured()) {
+    return;
+  }
+
+  const parsed = updateListingConditionSchema.safeParse({
+    listingId: formData.get("listingId"),
+    condition: formData.get("condition"),
+    slug: formData.get("slug"),
+  });
+
+  if (!parsed.success) {
+    return;
+  }
+
+  await requireAdmin("/admin");
+  const supabase = await createClient();
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("id, tags")
+    .eq("id", parsed.data.listingId)
+    .maybeSingle();
+
+  if (!listing) {
+    revalidateAppPaths(parsed.data.slug);
+    return;
+  }
+
+  const existingTags = Array.isArray(listing.tags)
+    ? listing.tags.filter((tag): tag is string => typeof tag === "string")
+    : [];
+  const nextTags = stripListingConditionTags(existingTags);
+  const conditionTag =
+    parsed.data.condition === "unspecified"
+      ? null
+      : getListingConditionTag(parsed.data.condition);
+
+  if (conditionTag) {
+    nextTags.unshift(conditionTag);
+  }
+
+  await supabase
+    .from("listings")
+    .update({ tags: nextTags })
+    .eq("id", parsed.data.listingId);
+
+  revalidateAppPaths(parsed.data.slug);
+}
+
+export async function updateEnquiryStatusAction(formData: FormData) {
+  if (!isSupabaseConfigured()) {
+    return;
+  }
+
+  const parsed = updateEnquiryStatusSchema.safeParse({
+    enquiryId: formData.get("enquiryId"),
+    status: formData.get("status"),
+    adminNote: formData.get("adminNote")?.toString().trim() || undefined,
+  });
+
+  if (!parsed.success) {
+    redirect(
+      buildAdminRedirect("enquiries", "Invalid enquiry update.", "error"),
+    );
+  }
+
+  await requireAdmin("/admin");
+  const supabase = createAdminClient();
+  const { data: enquiry, error } = await supabase
+    .from("audit_logs")
+    .select("payload")
+    .eq("entity_type", "listing_enquiry")
+    .eq("entity_id", parsed.data.enquiryId)
+    .eq("action", "listing_interest_submitted")
+    .maybeSingle();
+
+  if (error || !enquiry) {
+    redirect(buildAdminRedirect("enquiries", "Enquiry not found.", "error"));
+  }
+
+  const payload =
+    enquiry.payload && typeof enquiry.payload === "object"
+      ? (enquiry.payload as Record<string, unknown>)
+      : {};
+
+  const nextPayload = {
+    ...payload,
+    status: parsed.data.status,
+    admin_note: parsed.data.adminNote || null,
+    handled_at:
+      parsed.data.status === "new"
+        ? null
+        : typeof payload.handled_at === "string"
+          ? payload.handled_at
+          : new Date().toISOString(),
+  };
+
+  const { error: updateError } = await supabase
+    .from("audit_logs")
+    .update({ payload: nextPayload })
+    .eq("entity_type", "listing_enquiry")
+    .eq("entity_id", parsed.data.enquiryId)
+    .eq("action", "listing_interest_submitted");
+
+  if (updateError) {
+    redirect(
+      buildAdminRedirect(
+        "enquiries",
+        "Could not update that enquiry right now.",
+        "error",
+      ),
+    );
+  }
+
+  revalidateAppPaths();
+  redirect(buildAdminRedirect("enquiries", "Enquiry updated."));
+}
+
 export async function closeAuctionAction(formData: FormData) {
   if (!isSupabaseConfigured()) {
     return;
@@ -774,7 +949,8 @@ export async function updateOrderStatusAction(formData: FormData) {
     listingId: formData.get("listingId"),
     listingSlug: formData.get("listingSlug"),
     status: formData.get("status"),
-    paymentReference: formData.get("paymentReference")?.toString().trim() || undefined,
+    paymentReference:
+      formData.get("paymentReference")?.toString().trim() || undefined,
     paymentNotes: formData.get("paymentNotes")?.toString().trim() || undefined,
   });
 
@@ -797,13 +973,20 @@ export async function updateOrderStatusAction(formData: FormData) {
     payment_reference: parsed.data.paymentReference || null,
     payment_notes: parsed.data.paymentNotes || null,
     paid_at:
-      parsed.data.status === "paid" || parsed.data.status === "fulfilled" ? now : null,
+      parsed.data.status === "paid" || parsed.data.status === "fulfilled"
+        ? now
+        : null,
     fulfilled_at: parsed.data.status === "fulfilled" ? now : null,
     cancelled_at:
-      parsed.data.status === "cancelled" || parsed.data.status === "refunded" ? now : null,
+      parsed.data.status === "cancelled" || parsed.data.status === "refunded"
+        ? now
+        : null,
   };
 
-  await supabase.from("orders").update(updatePayload).eq("id", parsed.data.orderId);
+  await supabase
+    .from("orders")
+    .update(updatePayload)
+    .eq("id", parsed.data.orderId);
 
   if (parsed.data.status === "cancelled" || parsed.data.status === "refunded") {
     await supabase
@@ -870,7 +1053,9 @@ export async function deleteOrderAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirect(buildAdminRedirect("orders", "Invalid order deletion request.", "error"));
+    redirect(
+      buildAdminRedirect("orders", "Invalid order deletion request.", "error"),
+    );
   }
 
   await requireAdmin("/admin");
@@ -912,7 +1097,10 @@ export async function deleteOrderAction(formData: FormData) {
     })
     .eq("settlement_order_id", order.id);
 
-  const { error: deleteError } = await supabase.from("orders").delete().eq("id", order.id);
+  const { error: deleteError } = await supabase
+    .from("orders")
+    .delete()
+    .eq("id", order.id);
 
   if (deleteError) {
     redirect(buildAdminRedirect("orders", "Order delete failed.", "error"));

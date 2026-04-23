@@ -4,6 +4,9 @@ import type { OrderKind } from "@/lib/marketplace-shared";
 
 let stripeClient: Stripe | null = null;
 
+export const DEFAULT_CHECKOUT_SUCCESS_PATH =
+  "/checkout/success?session_id={CHECKOUT_SESSION_ID}";
+
 function getStripeClient() {
   if (!stripeClient) {
     stripeClient = new Stripe(getStripeEnv().secretKey, {
@@ -74,7 +77,7 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
   const stripe = getStripeClient();
   const siteUrl = getSiteUrl();
   const listingName = order.listingTitle || "Ex Kitchens order";
-  const successPath = order.successPath || "/account?payment=success";
+  const successPath = order.successPath || DEFAULT_CHECKOUT_SUCCESS_PATH;
   const cancelPath = order.cancelPath || "/account?payment=cancel";
   const productImages = getCheckoutImageUrls({
     siteUrl,
@@ -147,4 +150,8 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
 
 export function getStripeWebhookClient() {
   return getStripeClient();
+}
+
+export async function getCheckoutSession(sessionId: string) {
+  return getStripeClient().checkout.sessions.retrieve(sessionId);
 }

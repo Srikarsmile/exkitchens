@@ -29,13 +29,11 @@ export default function ListingImageGallery({
     () => [heroImage, ...galleryImages.filter((imageUrl) => imageUrl !== heroImage)],
     [galleryImages, heroImage],
   );
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const selectedImageIndex = Math.min(selectedIndex, images.length - 1);
   const activeImageIndex = activeIndex ?? 0;
-  const inlineGalleryImages = galleryImages.slice(0, 4);
-  const remainingInlineImageCount = Math.max(
-    galleryImages.length - inlineGalleryImages.length,
-    0,
-  );
+  const selectedImage = images[selectedImageIndex] ?? heroImage;
   const heroBlurDataUrl = getShimmerBlurDataUrl(1600, 960);
   const galleryBlurDataUrl = getShimmerBlurDataUrl(640, 480);
   const preloadedLightboxImages = useRef(new Set<string>());
@@ -145,13 +143,13 @@ export default function ListingImageGallery({
       <div className="space-y-4">
         <button
           type="button"
-          onClick={() => setActiveIndex(0)}
+          onClick={() => setActiveIndex(selectedImageIndex)}
           className="group relative block min-h-[320px] w-full overflow-hidden rounded-[2rem] bg-[#f3f3f3] text-left md:min-h-[420px] lg:h-[560px]"
           aria-label={`View larger image of ${title}`}
         >
           <ListingImage
-            src={heroImage}
-            alt={title}
+            src={selectedImage}
+            alt={`${title} image ${selectedImageIndex + 1}`}
             fill
             preload
             sizes="100vw"
@@ -170,41 +168,59 @@ export default function ListingImageGallery({
           </div>
         </button>
 
-        {galleryImages.length > 0 ? (
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {inlineGalleryImages.map((imageUrl, index) => (
+        {images.length > 1 ? (
+          <div className="rounded-[1.75rem] border border-[#e6ebe6] bg-white px-4 py-4 shadow-[0_18px_40px_rgba(17,17,17,0.04)]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#3d7a44]">
+                  Photo strip
+                </p>
+                <p className="mt-2 text-sm text-gray-500">
+                  Scroll through the gallery and click any image to enlarge it.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveIndex(selectedIndex)}
+                className="inline-flex shrink-0 items-center justify-center rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
+              >
+                View all {images.length} photos
+              </button>
+            </div>
+
+            <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+              {images.map((imageUrl, index) => (
                 <button
-                  key={imageUrl}
+                  key={`${imageUrl}-${index}`}
                   type="button"
-                  onClick={() => setActiveIndex(index + 1)}
-                  className="group relative h-44 overflow-hidden rounded-2xl bg-[#f3f3f3] text-left"
-                  aria-label={`View gallery image ${index + 1} for ${title}`}
+                  onClick={() => setSelectedIndex(index)}
+                    className={`group relative h-24 w-32 shrink-0 overflow-hidden rounded-2xl border bg-[#f3f3f3] transition ${
+                    index === selectedImageIndex
+                      ? "border-[#3d7a44] ring-2 ring-[#3d7a44]/18"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                  aria-label={`Select image ${index + 1} for ${title}`}
                 >
                   <ListingImage
                     src={imageUrl}
-                    alt={`${title} gallery image ${index + 1}`}
+                    alt={`${title} thumbnail ${index + 1}`}
                     fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                    sizes="128px"
                     quality={50}
                     placeholder="blur"
                     blurDataURL={galleryBlurDataUrl}
                     className="object-cover transition duration-300 group-hover:scale-[1.03]"
                   />
-                  <div className="pointer-events-none absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+                  <div
+                    className={`pointer-events-none absolute inset-0 transition ${
+                      index === selectedImageIndex
+                        ? "bg-black/0"
+                        : "bg-black/5 group-hover:bg-black/0"
+                    }`}
+                  />
                 </button>
               ))}
             </div>
-
-            {remainingInlineImageCount > 0 ? (
-              <button
-                type="button"
-                onClick={() => setActiveIndex(0)}
-                className="inline-flex items-center justify-center rounded-full border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
-              >
-                View all {images.length} photos
-              </button>
-            ) : null}
           </div>
         ) : null}
       </div>
@@ -215,6 +231,7 @@ export default function ListingImageGallery({
           aria-modal="true"
           aria-label={`${title} image viewer`}
           className="fixed inset-0 z-50 bg-black/92 px-4 py-6"
+          onClick={() => setActiveIndex(null)}
         >
           <div className="mx-auto flex h-full w-full max-w-7xl flex-col">
             <div className="flex items-center justify-between gap-4 pb-4 text-white">

@@ -1,6 +1,8 @@
 import { Resend } from "resend";
 import {
+  getMarketplaceContactEmail,
   getMarketplaceEmailFrom,
+  getMarketplaceSupportPhone,
   getResendEnv,
   getSiteUrl,
   isResendConfigured,
@@ -142,6 +144,111 @@ interface PasswordResetEmailInput {
   resetUrl: string;
 }
 
+interface OrderConfirmationEmailInput {
+  recipientEmail: string;
+  recipientName?: string | null;
+  listingTitle: string;
+  amountPence: number;
+  orderId: string;
+}
+
+interface ListingInterestEmailInput {
+  enquiryId?: string | null;
+  listingTitle: string;
+  listingSlug: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  note?: string | null;
+  requestServices: boolean;
+}
+
+interface ListingInterestAcknowledgementEmailInput {
+  enquiryId?: string | null;
+  recipientEmail: string;
+  recipientName?: string | null;
+  listingTitle: string;
+  listingSlug: string;
+  requestServices: boolean;
+}
+
+function formatEmailMoney(pence: number) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0,
+  }).format(pence / 100);
+}
+
+function renderListingInterestEmail({
+  enquiryId,
+  listingTitle,
+  listingSlug,
+  fullName,
+  email,
+  phone,
+  note,
+  requestServices,
+}: ListingInterestEmailInput) {
+  const siteUrl = getSiteUrl();
+  const fields = [
+    [
+      "Enquiry reference",
+      enquiryId ? enquiryId.slice(0, 8).toUpperCase() : "Pending",
+    ],
+    ["Kitchen", listingTitle],
+    ["Listing URL", `${siteUrl}/marketplace/${listingSlug}`],
+    ["Name", fullName],
+    ["Email", email],
+    ["Phone", phone],
+    [
+      "Needs dismantling / delivery / installation quote",
+      requestServices ? "Yes" : "No",
+    ],
+    ["Message", note?.trim() || "No additional notes supplied."],
+  ] as const;
+
+  const rows = fields
+    .map(
+      ([label, value]) => `
+        <tr>
+          <td style="padding:12px 16px;border-bottom:1px solid #eef2ef;color:#6b7280;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;vertical-align:top;">${escapeHtml(label)}</td>
+          <td style="padding:12px 16px;border-bottom:1px solid #eef2ef;color:#111111;font-size:14px;line-height:1.6;">${escapeHtml(value)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>New Ex Kitchens enquiry</title>
+      </head>
+      <body style="margin:0;background:#f3f5f3;font-family:Inter,Arial,sans-serif;color:#111111;">
+        <div style="margin:0 auto;padding:32px 16px;max-width:680px;">
+          <div style="overflow:hidden;border-radius:24px;background:#ffffff;border:1px solid #dfe5df;">
+            <div style="padding:28px 32px 20px;border-bottom:1px solid #eef2ef;">
+              <div style="color:#3d7a44;font-size:13px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;">Ex Kitchens</div>
+              <h1 style="margin:18px 0 0;color:#111111;font-size:32px;font-weight:400;line-height:1.15;">New buyer enquiry</h1>
+              <p style="margin:12px 0 0;color:#4b5563;font-size:15px;line-height:1.7;">
+                A buyer has requested contact about <strong style="color:#111111;">${escapeHtml(listingTitle)}</strong>.
+              </p>
+            </div>
+            <div style="padding:24px 32px 32px;">
+              <table role="presentation" style="width:100%;border-collapse:collapse;border:1px solid #eef2ef;border-radius:18px;overflow:hidden;">
+                ${rows}
+              </table>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
 export async function sendAccountVerificationEmail({
   recipientEmail,
   recipientName,
@@ -225,6 +332,85 @@ export async function sendPasswordResetEmail({
   });
 }
 
+export async function sendOrderConfirmationEmail({
+  recipientEmail,
+  recipientName,
+  listingTitle,
+  amountPence,
+  orderId,
+}: OrderConfirmationEmailInput) {
+  if (!isResendConfigured()) {
+    return { error: null };
+  }
+
+  const resend = getResendClient();
+  const accountUrl = `${getSiteUrl()}/account`;
+
+  return resend.emails.send({
+    from: getMarketplaceEmailFrom(),
+    to: recipientEmail,
+    subject: "Your Ex Kitchens payment is confirmed",
+    html: renderEmail({
+      preview: "Your Ex Kitchens payment is confirmed",
+      heading: "Payment received",
+      recipientName,
+      body: `We’ve received your payment of ${formatEmailMoney(amountPence)} for ${listingTitle}.`,
+      secondaryBody: `Order reference: ${orderId.slice(0, 8).toUpperCase()}. We’ll contact you next with collection and handover details.`,
+      actionLabel: "View your order",
+      actionUrl: accountUrl,
+    }),
+  });
+}
+
+export async function sendListingInterestEmail(
+  input: ListingInterestEmailInput,
+) {
+  if (!isResendConfigured()) {
+    return { error: null };
+  }
+
+  const resend = getResendClient();
+
+  return resend.emails.send({
+    from: getMarketplaceEmailFrom(),
+    to: getMarketplaceContactEmail(),
+    subject: `New buyer enquiry: ${input.listingTitle}`,
+    html: renderListingInterestEmail(input),
+  });
+}
+
+export async function sendListingInterestAcknowledgementEmail({
+  enquiryId,
+  recipientEmail,
+  recipientName,
+  listingTitle,
+  listingSlug,
+  requestServices,
+}: ListingInterestAcknowledgementEmailInput) {
+  if (!isResendConfigured()) {
+    return { error: null };
+  }
+
+  const resend = getResendClient();
+  const listingUrl = `${getSiteUrl()}/marketplace/${listingSlug}`;
+  const reference = enquiryId ? enquiryId.slice(0, 8).toUpperCase() : "Pending";
+
+  return resend.emails.send({
+    from: getMarketplaceEmailFrom(),
+    to: recipientEmail,
+    subject: `We received your enquiry about ${listingTitle}`,
+    html: renderEmail({
+      preview: `We received your enquiry about ${listingTitle}`,
+      heading: "Enquiry received",
+      recipientName,
+      body: `Thanks for your interest in ${listingTitle}. No payment has been taken. The Ex Kitchens team will review availability and contact you directly.`,
+      secondaryBody: `${requestServices ? "We noted that you would like a quote for dismantling, delivery, or installation as well. " : ""}Reference ${reference}. If you need anything sooner, call ${getMarketplaceSupportPhone()} or reply to this email.`,
+      actionLabel: "View kitchen",
+      actionUrl: listingUrl,
+    }),
+  });
+}
+
 export async function deliverPendingNotificationEmails(limit = 20) {
   if (!isResendConfigured() || !isSupabaseAdminConfigured()) {
     return { claimed: 0, sent: 0, failed: 0, skipped: 0 };
@@ -232,9 +418,12 @@ export async function deliverPendingNotificationEmails(limit = 20) {
 
   const supabase = createAdminClient();
   const resend = getResendClient();
-  const { data, error } = await supabase.rpc("claim_pending_notification_emails", {
-    p_limit: limit,
-  });
+  const { data, error } = await supabase.rpc(
+    "claim_pending_notification_emails",
+    {
+      p_limit: limit,
+    },
+  );
 
   if (error) {
     console.error("Failed to claim notification emails", error);

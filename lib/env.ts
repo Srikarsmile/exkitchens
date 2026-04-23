@@ -4,6 +4,8 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 const resendApiKey = process.env.RESEND_API_KEY;
+const marketplaceContactEmail =
+  process.env.MARKETPLACE_CONTACT_EMAIL || "info@exkitchens.com";
 const marketplaceSupportPhone =
   process.env.NEXT_PUBLIC_MARKETPLACE_SUPPORT_PHONE ||
   process.env.MARKETPLACE_SUPPORT_PHONE ||
@@ -20,7 +22,9 @@ function normaliseUrl(input?: string | null) {
     return null;
   }
 
-  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const candidate = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
 
   return candidate.replace(/\/+$/, "");
 }
@@ -63,6 +67,26 @@ export function isStripeConfigured() {
   return Boolean(stripeSecretKey && stripeWebhookSecret);
 }
 
+export function getStripeMode() {
+  if (!stripeSecretKey) {
+    return "missing" as const;
+  }
+
+  if (stripeSecretKey.startsWith("sk_live_")) {
+    return "live" as const;
+  }
+
+  if (stripeSecretKey.startsWith("sk_test_")) {
+    return "test" as const;
+  }
+
+  return "unknown" as const;
+}
+
+export function hasValidStripeWebhookSecret() {
+  return Boolean(stripeWebhookSecret?.startsWith("whsec_"));
+}
+
 export function getStripeEnv() {
   if (!stripeSecretKey || !stripeWebhookSecret) {
     throw new Error(
@@ -95,6 +119,15 @@ export function getMarketplaceEmailFrom() {
     process.env.MARKETPLACE_EMAIL_FROM ||
     "Ex Kitchens <info@updates.exkitchens.com>"
   );
+}
+
+export function getMarketplaceContactEmail() {
+  return marketplaceContactEmail.trim();
+}
+
+export function getMarketplaceContactEmailHref() {
+  const email = getMarketplaceContactEmail();
+  return email ? `mailto:${email}` : "";
 }
 
 export function getMarketplaceCronSecret() {

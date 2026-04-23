@@ -5,6 +5,8 @@ import {
   closeAuctionAction,
   deleteOrderAction,
   deleteUserAction,
+  updateEnquiryStatusAction,
+  updateListingConditionAction,
   updateListingSellerAction,
   updateListingStatusAction,
   updateOrderStatusAction,
@@ -17,6 +19,7 @@ import {
 import { requireAdmin } from "@/lib/auth";
 import {
   getAdminCounts,
+  getAdminEnquiries,
   getAdminListings,
   getAdminNotifications,
   getAdminOrders,
@@ -24,21 +27,40 @@ import {
   getAdminUsers,
 } from "@/lib/admin";
 import {
+  getMarketplaceContactEmail,
+  getMarketplaceSupportPhone,
+  getStripeMode,
+  hasValidStripeWebhookSecret,
+  isResendConfigured,
+  isSupabaseAdminConfigured,
+} from "@/lib/env";
+import {
   formatBidderStatus,
   formatDateTime,
   formatMoney,
   formatOrderStatus,
   formatTimeRemaining,
+  getListingConditionLabel,
 } from "@/lib/marketplace-shared";
 
 interface AdminPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-function getSingleSearchParam(
-  value: string | string[] | undefined,
-) {
+function getSingleSearchParam(value: string | string[] | undefined) {
   return typeof value === "string" ? value : undefined;
+}
+
+function formatEnquiryStatus(status: string) {
+  switch (status) {
+    case "contacted":
+      return "Contacted";
+    case "closed":
+      return "Closed";
+    case "new":
+    default:
+      return "New";
+  }
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
@@ -51,20 +73,77 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         viewer.profile?.email ||
         viewer.user.email ||
         "Current admin";
-  const [counts, listings, users, orders, notifications, sellerOptions] = await Promise.all([
+  const [
+    counts,
+    listings,
+    enquiries,
+    users,
+    orders,
+    notifications,
+    sellerOptions,
+  ] = await Promise.all([
     getAdminCounts(),
     getAdminListings(),
+    getAdminEnquiries(),
     getAdminUsers(),
     getAdminOrders(),
     getAdminNotifications(viewer.user.id),
     getSellerOptions(),
   ]);
-  const unreadAdminNotifications = notifications.filter((item) => !item.readAt).length;
+  const unreadAdminNotifications = notifications.filter(
+    (item) => !item.readAt,
+  ).length;
+  const newEnquiryCount = enquiries.filter(
+    (item) => item.status === "new",
+  ).length;
   const flashMessage = getSingleSearchParam(resolvedSearchParams.message);
   const flashTone =
     getSingleSearchParam(resolvedSearchParams.messageType) === "error"
       ? "error"
       : "success";
+  const stripeMode = getStripeMode();
+  const supportPhone = getMarketplaceSupportPhone();
+  const contactEmail = getMarketplaceContactEmail();
+  const operationalChecks = [
+    {
+      label: "Admin database access",
+      value: isSupabaseAdminConfigured() ? "Ready" : "Missing",
+      tone: isSupabaseAdminConfigured() ? "good" : "bad",
+      detail: "Service-role access for admin tools and enquiry storage.",
+    },
+    {
+      label: "Stripe checkout",
+      value:
+        stripeMode === "live"
+          ? "Live mode"
+          : stripeMode === "test"
+            ? "Test mode"
+            : stripeMode === "unknown"
+              ? "Configured"
+              : "Missing",
+      tone:
+        stripeMode === "missing"
+          ? "bad"
+          : stripeMode === "test"
+            ? "warn"
+            : "good",
+      detail: hasValidStripeWebhookSecret()
+        ? "Webhook signing secret looks valid."
+        : "Webhook signing secret is missing or invalid.",
+    },
+    {
+      label: "Buyer emails",
+      value: isResendConfigured() ? "Configured" : "Disabled",
+      tone: isResendConfigured() ? "good" : "warn",
+      detail: `Contact inbox ${contactEmail}.`,
+    },
+    {
+      label: "Support phone",
+      value: supportPhone,
+      tone: "good",
+      detail: "Shown on marketplace pages, enquiry cards, and service prompts.",
+    },
+  ];
 
   return (
     <main id="main-content" className="mx-auto w-full max-w-7xl px-6 py-12">
@@ -115,25 +194,28 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </div>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-5">
+      <section className="grid gap-4 md:grid-cols-6">
         {[
           { label: "Listings", value: counts.totalListings },
           { label: "Live auctions", value: counts.liveAuctions },
           { label: "Registered users", value: counts.registeredUsers },
           { label: "Pending approvals", value: counts.pendingApprovals },
           { label: "Open orders", value: counts.openOrders },
+          { label: "New enquiries", value: newEnquiryCount },
         ].map((metric) => (
           <div
             key={metric.label}
             className="rounded-[2rem] bg-white p-6 shadow-[0_20px_40px_rgba(17,17,17,0.05)]"
           >
             <p className="text-sm text-gray-500">{metric.label}</p>
-            <p className="mt-3 text-4xl font-light text-gray-900">{metric.value}</p>
+            <p className="mt-3 text-4xl font-light text-gray-900">
+              {metric.value}
+            </p>
           </div>
         ))}
       </section>
 
-      <section className="mt-10 grid gap-4 md:grid-cols-4">
+      <section className="mt-10 grid gap-4 md:grid-cols-5">
         {[
           {
             title: "Add stock",
@@ -146,6 +228,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             body: "Review buyer accounts, phone verification, and bidder status in one table.",
             href: "#approvals",
             label: "Open approvals",
+          },
+          {
+            title: "Review enquiries",
+            body: "Track anonymous buyer requests, service interest, and follow-up notes in one place.",
+            href: "#enquiries",
+            label: "Open enquiries",
           },
           {
             title: "Track payments",
@@ -179,10 +267,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <section className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-medium text-gray-900">Admin activity</h2>
+            <h2 className="text-2xl font-medium text-gray-900">
+              Admin activity
+            </h2>
             <p className="mt-2 text-sm text-gray-500">
-              Internal marketplace events such as new order creation land here, not
-              in the buyer account feed.
+              Internal marketplace events such as new enquiries and order
+              creation land here, not in the buyer account feed.
             </p>
           </div>
           {unreadAdminNotifications > 0 ? (
@@ -213,7 +303,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">{notification.title}</p>
+                    <p className="font-medium text-gray-900">
+                      {notification.title}
+                    </p>
                     <p className="mt-1 text-sm leading-6 text-gray-600">
                       {notification.body}
                     </p>
@@ -247,11 +339,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <section className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-medium text-gray-900">Listing intake</h2>
+            <h2 className="text-2xl font-medium text-gray-900">
+              Listing intake
+            </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-              New listings now have their own page so the dashboard stays easier to
-              scan. Use the listing form when you want to publish a new kitchen,
-              then come back here to manage status and auctions.
+              New listings now have their own page so the dashboard stays easier
+              to scan. Use the listing form when you want to publish a new
+              kitchen, then come back here to manage status and auctions.
             </p>
           </div>
           <Link
@@ -279,15 +373,190 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </section>
 
       <section
+        id="operations"
+        className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-medium text-gray-900">
+              Operational checks
+            </h2>
+            <p className="mt-2 text-sm text-gray-500">
+              A quick wiring check for the pieces that matter during beta:
+              database-backed admin tools, checkout, and email delivery.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {operationalChecks.map((item) => (
+            <div
+              key={item.label}
+              className="rounded-[1.5rem] border border-gray-200 bg-[#fafafa] p-5"
+            >
+              <p className="text-sm text-gray-500">{item.label}</p>
+              <p
+                className={`mt-3 text-2xl font-medium ${
+                  item.tone === "bad"
+                    ? "text-red-700"
+                    : item.tone === "warn"
+                      ? "text-amber-700"
+                      : "text-gray-900"
+                }`}
+              >
+                {item.value}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-gray-500">
+                {item.detail}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section
+        id="enquiries"
+        className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-medium text-gray-900">
+              Buyer enquiries
+            </h2>
+            <p className="mt-2 text-sm text-gray-500">
+              Anonymous listing requests now land here as tracked records, with
+              contact details, service interest, and internal follow-up notes.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8 overflow-x-auto">
+          <table className="min-w-full border-separate border-spacing-y-3">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-[0.2em] text-gray-400">
+                <th className="pb-2">Listing</th>
+                <th className="pb-2">Buyer</th>
+                <th className="pb-2">Request</th>
+                <th className="pb-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {enquiries.map((enquiry) => (
+                <tr
+                  key={enquiry.id}
+                  className="bg-[#fafafa] text-sm text-gray-700"
+                >
+                  <td className="rounded-l-2xl px-4 py-4 align-top">
+                    {enquiry.listingSlug ? (
+                      <Link
+                        href={`/marketplace/${enquiry.listingSlug}`}
+                        className="font-medium text-gray-900 hover:text-[#3d7a44]"
+                      >
+                        {enquiry.listingTitle || "Untitled listing"}
+                      </Link>
+                    ) : (
+                      <p className="font-medium text-gray-900">
+                        {enquiry.listingTitle || "Untitled listing"}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Received {formatDateTime(enquiry.createdAt)}
+                    </p>
+                    {enquiry.acknowledgedAt ? (
+                      <p className="mt-1 text-xs text-[#3d7a44]">
+                        Buyer email sent{" "}
+                        {formatDateTime(enquiry.acknowledgedAt)}
+                      </p>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-4 align-top">
+                    <p className="font-medium text-gray-900">
+                      {enquiry.fullName}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {enquiry.email}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {enquiry.phone}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4 align-top">
+                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+                      Services
+                    </p>
+                    <p className="mt-2 text-sm text-gray-700">
+                      {enquiry.requestServices
+                        ? "Needs dismantling / delivery / installation quote"
+                        : "Kitchen only"}
+                    </p>
+                    <p className="mt-3 text-xs uppercase tracking-[0.2em] text-gray-400">
+                      Buyer note
+                    </p>
+                    <p className="mt-2 max-w-xl whitespace-pre-line text-sm leading-6 text-gray-600">
+                      {enquiry.note || "No additional note supplied."}
+                    </p>
+                  </td>
+                  <td className="rounded-r-2xl px-4 py-4 align-top">
+                    <form
+                      action={updateEnquiryStatusAction}
+                      className="space-y-3"
+                    >
+                      <input
+                        type="hidden"
+                        name="enquiryId"
+                        value={enquiry.id}
+                      />
+                      <select
+                        name="status"
+                        defaultValue={enquiry.status}
+                        className="w-40 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                      >
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                      <input
+                        name="adminNote"
+                        defaultValue={enquiry.adminNote || ""}
+                        placeholder="Internal follow-up note"
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
+                      >
+                        Save enquiry
+                      </button>
+                      <p className="text-xs text-gray-500">
+                        {formatEnquiryStatus(enquiry.status)}
+                      </p>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {enquiries.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-sm text-gray-500">
+              No buyer enquiries yet.
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section
         id="approvals"
         className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]"
       >
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-medium text-gray-900">Bidder approvals</h2>
+            <h2 className="text-2xl font-medium text-gray-900">
+              Bidder approvals
+            </h2>
             <p className="mt-2 text-sm text-gray-500">
-              Review roles, bidder access, and phone verification from one table.
-              Change access here when a buyer is ready to bid.
+              Review roles, bidder access, and phone verification from one
+              table. Change access here when a buyer is ready to bid.
             </p>
           </div>
         </div>
@@ -304,12 +573,17 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="bg-[#fafafa] text-sm text-gray-700">
+                <tr
+                  key={user.id}
+                  className="bg-[#fafafa] text-sm text-gray-700"
+                >
                   <td className="rounded-l-2xl px-4 py-4 align-top">
                     <p className="font-medium text-gray-900">
                       {user.fullName || "Unnamed account"}
                     </p>
-                    <p className="mt-1 text-xs text-gray-500">{user.email || user.id}</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {user.email || user.id}
+                    </p>
                     <p className="mt-1 text-xs text-gray-400">
                       Created {formatDateTime(user.createdAt)}
                     </p>
@@ -333,7 +607,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         : ""}
                     </p>
                     {user.bidderStatusReason ? (
-                      <p className="mt-2 text-xs text-gray-400">{user.bidderStatusReason}</p>
+                      <p className="mt-2 text-xs text-gray-400">
+                        {user.bidderStatusReason}
+                      </p>
                     ) : null}
                   </td>
                   <td className="rounded-r-2xl px-4 py-4 align-top">
@@ -437,7 +713,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </thead>
             <tbody>
               {orders.map((order) => (
-                <tr key={order.id} className="bg-[#fafafa] text-sm text-gray-700">
+                <tr
+                  key={order.id}
+                  className="bg-[#fafafa] text-sm text-gray-700"
+                >
                   <td className="rounded-l-2xl px-4 py-4 align-top">
                     {order.listingSlug ? (
                       <Link
@@ -455,13 +734,18 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       {order.kind === "auction_win" ? "Auction win" : "Buy now"}
                     </p>
                     <p className="mt-1 text-xs text-gray-400">
-                      Seller {order.sellerName || order.sellerEmail || "Unassigned"}
+                      Seller{" "}
+                      {order.sellerName || order.sellerEmail || "Unassigned"}
                     </p>
                   </td>
                   <td className="px-4 py-4 align-top">
-                    <p>{order.buyerName || order.buyerEmail || "Unknown buyer"}</p>
+                    <p>
+                      {order.buyerName || order.buyerEmail || "Unknown buyer"}
+                    </p>
                     {order.buyerEmail ? (
-                      <p className="mt-1 text-xs text-gray-500">{order.buyerEmail}</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {order.buyerEmail}
+                      </p>
                     ) : null}
                   </td>
                   <td className="px-4 py-4 align-top">
@@ -473,9 +757,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     </p>
                   </td>
                   <td className="px-4 py-4 align-top">
-                    <form action={updateOrderStatusAction} className="space-y-3">
+                    <form
+                      action={updateOrderStatusAction}
+                      className="space-y-3"
+                    >
                       <input type="hidden" name="orderId" value={order.id} />
-                      <input type="hidden" name="listingId" value={order.listingId} />
+                      <input
+                        type="hidden"
+                        name="listingId"
+                        value={order.listingId}
+                      />
                       <input
                         type="hidden"
                         name="listingSlug"
@@ -486,7 +777,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         defaultValue={order.status}
                         className="w-48 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
                       >
-                        <option value="awaiting_payment">Awaiting payment</option>
+                        <option value="awaiting_payment">
+                          Awaiting payment
+                        </option>
                         <option value="paid">Paid</option>
                         <option value="fulfilled">Fulfilled</option>
                         <option value="cancelled">Cancelled</option>
@@ -515,7 +808,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       </p>
                     </form>
                     {["cancelled", "refunded"].includes(order.status) ||
-                    (order.status === "awaiting_payment" && order.kind === "buy_now") ? (
+                    (order.status === "awaiting_payment" &&
+                      order.kind === "buy_now") ? (
                       <form action={deleteOrderAction} className="mt-3">
                         <input type="hidden" name="orderId" value={order.id} />
                         <input
@@ -531,7 +825,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       </form>
                     ) : (
                       <p className="mt-3 text-xs text-gray-400">
-                        Delete becomes available after the order is cancelled or refunded.
+                        Delete becomes available after the order is cancelled or
+                        refunded.
                       </p>
                     )}
                   </td>
@@ -560,8 +855,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <h2 className="text-2xl font-medium text-gray-900">Listings</h2>
             <p className="mt-2 text-sm text-gray-500">
               Control publication state and intervene on auctions when needed.
-              Published means visible on the marketplace, archived removes it, and
-              sold keeps the record closed.
+              Published means visible on the marketplace, archived removes it,
+              and sold keeps the record closed.
             </p>
           </div>
           <Link
@@ -585,135 +880,242 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               </tr>
             </thead>
             <tbody>
-              {listings.map((listing) => (
-                <tr key={listing.id} className="bg-[#fafafa] text-sm text-gray-700">
-                  <td className="rounded-l-2xl px-4 py-4 align-top">
-                    <Link
-                      href={`/marketplace/${listing.slug}`}
-                      className="font-medium text-gray-900 hover:text-[#3d7a44]"
-                    >
-                      {listing.title}
-                    </Link>
-                    <p className="mt-1 text-xs text-gray-500">{listing.brand || "Curated"}</p>
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    <p>{listing.sellerName || listing.sellerEmail || "Admin owned"}</p>
-                  </td>
-                  <td className="px-4 py-4 align-top capitalize">
-                    {listing.saleType.replace("_", " ")}
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    <p className="font-medium text-gray-900">
-                      {formatMoney(listing.currentPricePence)}
-                    </p>
-                    {listing.reservePricePence ? (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Reserve {formatMoney(listing.reservePricePence)}
-                      </p>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    {listing.auction ? (
-                      <>
-                        <p className="capitalize text-gray-900">{listing.auction.status}</p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          Ends {formatTimeRemaining(listing.auction.endAt)}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          {listing.auction.bidCount} bids
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-gray-500">No auction record</p>
-                    )}
-                  </td>
-                  <td className="rounded-r-2xl px-4 py-4 align-top">
-                    <form action={updateListingStatusAction} className="space-y-3">
-                      <input type="hidden" name="listingId" value={listing.id} />
-                      <input type="hidden" name="slug" value={listing.slug} />
-                      <select
-                        name="status"
-                        defaultValue={listing.status}
-                        className="w-40 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
-                        <option value="archived">Archived</option>
-                        <option value="sold">Sold</option>
-                      </select>
-                      <button
-                        type="submit"
-                        className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
-                      >
-                        Save listing
-                      </button>
-                    </form>
+              {listings.map((listing) => {
+                const listingConditionLabel = getListingConditionLabel(
+                  listing.title,
+                  listing.summary,
+                  ...listing.tags,
+                );
 
-                    {!listing.settlementOrderId ? (
-                      <form action={updateListingSellerAction} className="mt-3 space-y-3">
-                        <input type="hidden" name="listingId" value={listing.id} />
+                return (
+                  <tr
+                    key={listing.id}
+                    className="bg-[#fafafa] text-sm text-gray-700"
+                  >
+                    <td className="rounded-l-2xl px-4 py-4 align-top">
+                      <Link
+                        href={`/marketplace/${listing.slug}`}
+                        className="font-medium text-gray-900 hover:text-[#3d7a44]"
+                      >
+                        {listing.title}
+                      </Link>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {listing.brand || "Curated"}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 align-top">
+                      <p>
+                        {listing.sellerName ||
+                          listing.sellerEmail ||
+                          "Admin owned"}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 align-top capitalize">
+                      {listing.saleType.replace("_", " ")}
+                      {listingConditionLabel ? (
+                        <p className="mt-1 text-xs text-gray-500">
+                          {listingConditionLabel}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs text-amber-700">
+                          Condition missing
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 align-top">
+                      <p className="font-medium text-gray-900">
+                        {formatMoney(listing.currentPricePence)}
+                      </p>
+                      {listing.reservePricePence ? (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Reserve {formatMoney(listing.reservePricePence)}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-4 align-top">
+                      {listing.auction ? (
+                        <>
+                          <p className="capitalize text-gray-900">
+                            {listing.auction.status}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Ends {formatTimeRemaining(listing.auction.endAt)}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-400">
+                            {listing.auction.bidCount} bids
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-gray-500">No auction record</p>
+                      )}
+                    </td>
+                    <td className="rounded-r-2xl px-4 py-4 align-top">
+                      <form
+                        action={updateListingStatusAction}
+                        className="space-y-3"
+                      >
+                        <input
+                          type="hidden"
+                          name="listingId"
+                          value={listing.id}
+                        />
                         <input type="hidden" name="slug" value={listing.slug} />
                         <select
-                          name="sellerProfileId"
-                          defaultValue={listing.sellerProfileId || viewer.user.id}
-                          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                          name="status"
+                          defaultValue={listing.status}
+                          className="w-40 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
                         >
-                          <option value={viewer.user.id}>
-                            {currentAdminLabel}
-                          </option>
-                          {sellerOptions
-                            .filter((seller) => seller.id !== viewer.user.id)
-                            .map((seller) => (
-                              <option key={seller.id} value={seller.id}>
-                                {seller.label}
-                              </option>
-                            ))}
+                          <option value="draft">Draft</option>
+                          <option value="published">Published</option>
+                          <option value="archived">Archived</option>
+                          <option value="sold">Sold</option>
                         </select>
                         <button
                           type="submit"
                           className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
                         >
-                          Save seller
+                          Save listing
                         </button>
-                        <p className="text-xs text-gray-500">
-                          The selected seller account cannot buy this listing while signed in.
-                        </p>
                       </form>
-                    ) : (
-                      <p className="mt-3 text-xs text-gray-400">
-                        Seller is locked because this listing already has a settlement order.
-                      </p>
-                    )}
 
-                    {listing.auction ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <form action={closeAuctionAction}>
-                          <input type="hidden" name="auctionId" value={listing.auction.id} />
-                          <input type="hidden" name="listingId" value={listing.id} />
-                          <input type="hidden" name="slug" value={listing.slug} />
+                      <form
+                        action={updateListingConditionAction}
+                        className="mt-3 space-y-3"
+                      >
+                        <input
+                          type="hidden"
+                          name="listingId"
+                          value={listing.id}
+                        />
+                        <input type="hidden" name="slug" value={listing.slug} />
+                        <select
+                          name="condition"
+                          defaultValue={
+                            listingConditionLabel === "Used"
+                              ? "used"
+                              : listingConditionLabel === "Ex-display"
+                                ? "ex_display"
+                                : "unspecified"
+                          }
+                          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                        >
+                          <option value="unspecified">Condition not set</option>
+                          <option value="ex_display">Ex-display</option>
+                          <option value="used">Used</option>
+                        </select>
+                        <button
+                          type="submit"
+                          className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
+                        >
+                          Save condition
+                        </button>
+                      </form>
+
+                      {!listing.settlementOrderId ? (
+                        <form
+                          action={updateListingSellerAction}
+                          className="mt-3 space-y-3"
+                        >
+                          <input
+                            type="hidden"
+                            name="listingId"
+                            value={listing.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="slug"
+                            value={listing.slug}
+                          />
+                          <select
+                            name="sellerProfileId"
+                            defaultValue={
+                              listing.sellerProfileId || viewer.user.id
+                            }
+                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value={viewer.user.id}>
+                              {currentAdminLabel}
+                            </option>
+                            {sellerOptions
+                              .filter((seller) => seller.id !== viewer.user.id)
+                              .map((seller) => (
+                                <option key={seller.id} value={seller.id}>
+                                  {seller.label}
+                                </option>
+                              ))}
+                          </select>
                           <button
                             type="submit"
-                            className="rounded-full bg-[#3d7a44] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2f6135]"
+                            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:text-gray-900"
                           >
-                            Close now
+                            Save seller
                           </button>
+                          <p className="text-xs text-gray-500">
+                            The selected seller account cannot buy this listing
+                            while signed in.
+                          </p>
                         </form>
-                        <form action={cancelAuctionAction}>
-                          <input type="hidden" name="auctionId" value={listing.auction.id} />
-                          <input type="hidden" name="listingId" value={listing.id} />
-                          <input type="hidden" name="slug" value={listing.slug} />
-                          <button
-                            type="submit"
-                            className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
-                          >
-                            Cancel auction
-                          </button>
-                        </form>
-                      </div>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
+                      ) : (
+                        <p className="mt-3 text-xs text-gray-400">
+                          Seller is locked because this listing already has a
+                          settlement order.
+                        </p>
+                      )}
+
+                      {listing.auction ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <form action={closeAuctionAction}>
+                            <input
+                              type="hidden"
+                              name="auctionId"
+                              value={listing.auction.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="listingId"
+                              value={listing.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="slug"
+                              value={listing.slug}
+                            />
+                            <button
+                              type="submit"
+                              className="rounded-full bg-[#3d7a44] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2f6135]"
+                            >
+                              Close now
+                            </button>
+                          </form>
+                          <form action={cancelAuctionAction}>
+                            <input
+                              type="hidden"
+                              name="auctionId"
+                              value={listing.auction.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="listingId"
+                              value={listing.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="slug"
+                              value={listing.slug}
+                            />
+                            <button
+                              type="submit"
+                              className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+                            >
+                              Cancel auction
+                            </button>
+                          </form>
+                        </div>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 

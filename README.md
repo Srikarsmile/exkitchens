@@ -41,6 +41,7 @@ Required for branded auth emails and notification delivery:
 
 - `RESEND_API_KEY`
 - `MARKETPLACE_EMAIL_FROM`
+- `MARKETPLACE_CONTACT_EMAIL` (optional, defaults to `info@exkitchens.com`)
 - `NEXT_PUBLIC_MARKETPLACE_SUPPORT_PHONE` (optional, defaults to `07913546586`)
 
 Optional operational secret:

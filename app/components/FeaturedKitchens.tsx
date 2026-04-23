@@ -10,6 +10,8 @@ import {
   calculatePercentageOff,
   formatMoney,
   formatTimeRemaining,
+  getListingConditionLabel,
+  getVisibleListingTags,
 } from "@/lib/marketplace-shared";
 import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
 
@@ -66,21 +68,24 @@ function TiltCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function FeaturedKitchens({ items }: { items: ListingCardData[] }) {
+export default function FeaturedKitchens({
+  items,
+}: {
+  items: ListingCardData[];
+}) {
   const [filter, setFilter] = useState<FilterType>("all");
 
   const filtered =
     filter === "all"
       ? items
       : items.filter((item) =>
-          filter === "auction" ? item.saleType === "auction" : item.saleType === "buy_now",
+          filter === "auction"
+            ? item.saleType === "auction"
+            : item.saleType === "buy_now",
         );
 
   return (
-    <section
-      id="kitchens"
-      className="w-full py-28 bg-white relative"
-    >
+    <section id="kitchens" className="w-full py-28 bg-white relative">
       <div className="max-w-7xl mx-auto px-6 md:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -122,9 +127,12 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.length === 0 ? (
             <div className="col-span-full rounded-[2rem] border border-dashed border-gray-200 bg-[#fafafa] px-6 py-12 text-center">
-              <h3 className="text-xl font-medium text-gray-900">No featured kitchens yet</h3>
+              <h3 className="text-xl font-medium text-gray-900">
+                No featured kitchens yet
+              </h3>
               <p className="mt-3 text-sm text-gray-500">
-                Create published listings in the admin panel and they will appear here.
+                Create published listings in the admin panel and they will
+                appear here.
               </p>
               <div className="mt-6">
                 <Link
@@ -138,11 +146,18 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
           ) : null}
 
           {filtered.map((item, index) => {
-            const buyNowPricePence = item.buyNowPricePence ?? item.currentPricePence;
+            const buyNowPricePence =
+              item.buyNowPricePence ?? item.currentPricePence;
             const buyNowDiscountPercent = calculatePercentageOff(
               item.originalPricePence,
               buyNowPricePence,
             );
+            const listingConditionLabel = getListingConditionLabel(
+              item.title,
+              item.summary,
+              ...item.tags,
+            );
+            const visibleTags = getVisibleListingTags(item.tags);
 
             return (
               <motion.div
@@ -156,7 +171,7 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
                 <TiltCard>
                   <div className="group relative rounded-xl overflow-hidden bg-white border border-gray-100 hover:border-gray-200 active:border-[#3d7a44]/30 transition-all cursor-pointer hover:shadow-xl active:shadow-lg duration-500">
                     <div className="relative h-[240px] w-full overflow-hidden bg-gray-50">
-                      <div className="absolute top-3 left-3 z-10 flex gap-2">
+                      <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-2">
                         {item.saleType === "auction" ? (
                           <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold">
                             <Clock className="w-3 h-3" />
@@ -168,6 +183,11 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
                             Buy Now
                           </div>
                         )}
+                        {listingConditionLabel ? (
+                          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/90 backdrop-blur-md text-[11px] font-semibold text-gray-700">
+                            {listingConditionLabel}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="absolute top-3 right-3 z-10">
                         <span className="px-2.5 py-1 rounded-md bg-white/90 backdrop-blur-md text-[11px] font-semibold text-gray-600">
@@ -176,7 +196,9 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
                       </div>
 
                       <ListingImage
-                        src={item.heroImageUrl || "/assets/kitchen_nano_square.jpg"}
+                        src={
+                          item.heroImageUrl || "/assets/kitchen_nano_square.jpg"
+                        }
                         alt={item.title}
                         fill
                         sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -188,16 +210,18 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
                     </div>
 
                     <div className="p-5">
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {item.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-2 py-0.5 rounded text-gray-400 text-[10px] bg-gray-50 font-medium"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+                      {visibleTags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {visibleTags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-2 py-0.5 rounded text-gray-400 text-[10px] bg-gray-50 font-medium"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
 
                       <h3 className="text-lg font-medium text-gray-900 mb-0.5 group-hover:text-[#3d7a44] transition-colors">
                         {item.title}
@@ -215,8 +239,8 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
                               {formatMoney(buyNowPricePence)}
                             </span>
                             {buyNowDiscountPercent ? (
-                              <span className="mt-1 text-xs font-medium text-[#3d7a44] block">
-                                Available at {buyNowDiscountPercent}% off retail
+                              <span className="mt-2 inline-flex rounded-full bg-[#e8f3e9] px-2.5 py-1 text-[11px] font-medium text-[#3d7a44]">
+                                {buyNowDiscountPercent}% off retail
                               </span>
                             ) : null}
                           </div>
@@ -259,7 +283,9 @@ export default function FeaturedKitchens({ items }: { items: ListingCardData[] }
             className="inline-flex items-center gap-3 px-7 py-3 rounded-full text-sm font-medium bg-gray-100 text-gray-600 transition hover:bg-gray-200"
           >
             Browse All Kitchens
-            <span className="text-[10px] uppercase tracking-wider text-[#3d7a44] bg-white px-2 py-0.5 rounded">Live</span>
+            <span className="text-[10px] uppercase tracking-wider text-[#3d7a44] bg-white px-2 py-0.5 rounded">
+              Live
+            </span>
           </Link>
         </motion.div>
       </div>

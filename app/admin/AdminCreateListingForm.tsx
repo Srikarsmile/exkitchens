@@ -9,7 +9,10 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { createListingAction, type AdminActionState } from "@/app/actions/admin";
+import {
+  createListingAction,
+  type AdminActionState,
+} from "@/app/actions/admin";
 import SubmitButton from "@/app/components/forms/SubmitButton";
 import type { SellerOption } from "@/lib/marketplace-shared";
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
@@ -67,7 +70,9 @@ function Section({
           {eyebrow}
         </p>
         <h2 className="mt-2 text-2xl font-medium text-gray-900">{title}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">{description}</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
+          {description}
+        </p>
       </div>
       {children}
     </section>
@@ -87,9 +92,13 @@ function Field({
 }) {
   return (
     <div className={span === 2 ? "md:col-span-2" : ""}>
-      <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-gray-700">
+        {label}
+      </label>
       {children}
-      {hint ? <p className="mt-2 text-xs leading-5 text-gray-500">{hint}</p> : null}
+      {hint ? (
+        <p className="mt-2 text-xs leading-5 text-gray-500">{hint}</p>
+      ) : null}
     </div>
   );
 }
@@ -149,7 +158,9 @@ function UploadPanel({
   return (
     <label className="block cursor-pointer rounded-[1.25rem] border border-dashed border-[#b7c7b7] bg-white px-5 py-6 transition hover:border-[#3d7a44] hover:bg-[#f7faf7]">
       <span className="block text-base font-medium text-gray-900">{title}</span>
-      <span className="mt-2 block text-sm leading-6 text-gray-500">{description}</span>
+      <span className="mt-2 block text-sm leading-6 text-gray-500">
+        {description}
+      </span>
       <span className="mt-4 inline-flex rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white">
         {multiple ? "Choose images" : "Choose image"}
       </span>
@@ -174,13 +185,15 @@ export default function AdminCreateListingForm({
 }: AdminCreateListingFormProps) {
   const [state, action] = useActionState(createListingAction, initialState);
   const [saleType, setSaleType] = useState<"auction" | "buy_now">("auction");
-  const [selectedSellerProfileId, setSelectedSellerProfileId] =
-    useState(defaultSellerProfileId);
+  const [selectedSellerProfileId, setSelectedSellerProfileId] = useState(
+    defaultSellerProfileId,
+  );
   const [heroPreview, setHeroPreview] = useState<PreviewImage[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<PreviewImage[]>([]);
   const [auctionStartsAtOffsetMinutes, setAuctionStartsAtOffsetMinutes] =
     useState("");
-  const [auctionEndsAtOffsetMinutes, setAuctionEndsAtOffsetMinutes] = useState("");
+  const [auctionEndsAtOffsetMinutes, setAuctionEndsAtOffsetMinutes] =
+    useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isPreparingUpload, setIsPreparingUpload] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -191,7 +204,8 @@ export default function AdminCreateListingForm({
   const uploadedHeroPathRef = useRef<HTMLInputElement>(null);
   const uploadedGalleryPathsRef = useRef<HTMLInputElement>(null);
   const bypassSubmitPreparationRef = useRef(false);
-  const isAdminSellerSelection = selectedSellerProfileId === currentAdminProfileId;
+  const isAdminSellerSelection =
+    selectedSellerProfileId === currentAdminProfileId;
 
   useEffect(() => {
     return () => {
@@ -287,8 +301,7 @@ export default function AdminCreateListingForm({
     const form = formRef.current;
     const title = form?.elements.namedItem("title");
     const slugField = form?.elements.namedItem("slug");
-    const rawTitle =
-      title instanceof HTMLInputElement ? title.value : "";
+    const rawTitle = title instanceof HTMLInputElement ? title.value : "";
     const rawSlug =
       slugField instanceof HTMLInputElement ? slugField.value : "";
     const listingSlug = slugify(rawSlug || rawTitle);
@@ -318,14 +331,12 @@ export default function AdminCreateListingForm({
         })),
       }),
     });
-    const payload = (await response.json().catch(() => null)) as
-      | {
-          ok?: boolean;
-          message?: string;
-          hero?: ListingImageUploadTarget | null;
-          gallery?: ListingImageUploadTarget[];
-        }
-      | null;
+    const payload = (await response.json().catch(() => null)) as {
+      ok?: boolean;
+      message?: string;
+      hero?: ListingImageUploadTarget | null;
+      gallery?: ListingImageUploadTarget[];
+    } | null;
 
     if (!response.ok || !payload?.ok) {
       throw new Error(payload?.message || "Could not prepare image upload.");
@@ -365,7 +376,9 @@ export default function AdminCreateListingForm({
       const galleryTargets = payload.gallery ?? [];
 
       if (galleryTargets.length !== galleryFiles.length) {
-        throw new Error("The gallery image upload targets do not match the selected files.");
+        throw new Error(
+          "The gallery image upload targets do not match the selected files.",
+        );
       }
 
       for (const [index, file] of galleryFiles.entries()) {
@@ -426,7 +439,9 @@ export default function AdminCreateListingForm({
       formRef.current?.requestSubmit();
     } catch (error) {
       setUploadError(
-        error instanceof Error ? error.message : "Image upload failed. Try again.",
+        error instanceof Error
+          ? error.message
+          : "Image upload failed. Try again.",
       );
     } finally {
       setIsPreparingUpload(false);
@@ -451,10 +466,26 @@ export default function AdminCreateListingForm({
         name="auctionEndsAtOffsetMinutes"
         value={auctionEndsAtOffsetMinutes}
       />
-      <input ref={uploadedHeroUrlRef} type="hidden" name="uploadedHeroImageUrl" />
-      <input ref={uploadedGalleryUrlsRef} type="hidden" name="uploadedGalleryUrls" />
-      <input ref={uploadedHeroPathRef} type="hidden" name="uploadedHeroImagePath" />
-      <input ref={uploadedGalleryPathsRef} type="hidden" name="uploadedGalleryPaths" />
+      <input
+        ref={uploadedHeroUrlRef}
+        type="hidden"
+        name="uploadedHeroImageUrl"
+      />
+      <input
+        ref={uploadedGalleryUrlsRef}
+        type="hidden"
+        name="uploadedGalleryUrls"
+      />
+      <input
+        ref={uploadedHeroPathRef}
+        type="hidden"
+        name="uploadedHeroImagePath"
+      />
+      <input
+        ref={uploadedGalleryPathsRef}
+        type="hidden"
+        name="uploadedGalleryPaths"
+      />
 
       <div className="rounded-[1.5rem] bg-[#111111] px-6 py-6 text-white">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#afcdb2]">
@@ -464,16 +495,16 @@ export default function AdminCreateListingForm({
           Add a kitchen with uploads from phone or computer
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-white/72">
-          Start by choosing the photos, then fill the commercial details. This page
-          now accepts normal image uploads, so you do not need to host the files
-          somewhere else first.
+          Start by choosing the photos, then fill the commercial details. This
+          page now accepts normal image uploads, so you do not need to host the
+          files somewhere else first.
         </p>
       </div>
 
       <Section
         eyebrow="Step 1"
         title="Upload the images"
-        description="Choose the main hero image and the gallery shots directly from your phone, tablet, or computer."
+        description="Choose the main hero image and the gallery shots directly from your phone, tablet, or computer. Use clear, well-lit photos and remove clutter before uploading."
       >
         <div className="grid gap-4 md:grid-cols-2">
           <UploadPanel
@@ -495,14 +526,18 @@ export default function AdminCreateListingForm({
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <p className="mb-2 text-sm font-medium text-gray-700">Hero preview</p>
+            <p className="mb-2 text-sm font-medium text-gray-700">
+              Hero preview
+            </p>
             <PreviewGrid
               items={heroPreview}
               emptyLabel="No hero image selected yet."
             />
           </div>
           <div>
-            <p className="mb-2 text-sm font-medium text-gray-700">Gallery preview</p>
+            <p className="mb-2 text-sm font-medium text-gray-700">
+              Gallery preview
+            </p>
             <PreviewGrid
               items={galleryPreviews}
               emptyLabel="No gallery images selected yet."
@@ -533,7 +568,9 @@ export default function AdminCreateListingForm({
                 name="galleryUrls"
                 rows={5}
                 className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
-                placeholder={"https://example.com/1.jpg\nhttps://example.com/2.jpg"}
+                placeholder={
+                  "https://example.com/1.jpg\nhttps://example.com/2.jpg"
+                }
               />
             </Field>
           </div>
@@ -569,6 +606,24 @@ export default function AdminCreateListingForm({
               className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
               placeholder="Rotpunkt"
             />
+          </Field>
+
+          <Field
+            label="Condition"
+            hint="This controls the public Ex-display or Used badge. You do not need to repeat it in tags."
+          >
+            <select
+              name="condition"
+              required
+              defaultValue=""
+              className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
+            >
+              <option value="" disabled>
+                Select condition
+              </option>
+              <option value="ex_display">Ex-display</option>
+              <option value="used">Used</option>
+            </select>
           </Field>
 
           <Field
@@ -614,7 +669,9 @@ export default function AdminCreateListingForm({
               name="sellerProfileId"
               required
               value={selectedSellerProfileId}
-              onChange={(event) => setSelectedSellerProfileId(event.currentTarget.value)}
+              onChange={(event) =>
+                setSelectedSellerProfileId(event.currentTarget.value)
+              }
               className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
             >
               <option value={currentAdminProfileId}>
@@ -623,9 +680,9 @@ export default function AdminCreateListingForm({
               {sellerOptions
                 .filter((seller) => seller.id !== currentAdminProfileId)
                 .map((seller) => (
-                <option key={seller.id} value={seller.id}>
-                  {seller.label}
-                </option>
+                  <option key={seller.id} value={seller.id}>
+                    {seller.label}
+                  </option>
                 ))}
             </select>
             <p
@@ -642,7 +699,7 @@ export default function AdminCreateListingForm({
           <Field
             label="Tags"
             span={2}
-            hint="Comma-separated tags like appliance brand, finish, worktop, island, or handle style."
+            hint="Comma-separated tags for appliance brand, finish, worktop, island, handle style, or standout details."
           >
             <input
               name="tags"
@@ -676,7 +733,10 @@ export default function AdminCreateListingForm({
             </select>
           </Field>
 
-          <Field label="Original price (GBP)" hint="Optional showroom or RRP reference.">
+          <Field
+            label="Original price (GBP)"
+            hint="Optional showroom or RRP reference."
+          >
             <input
               name="originalPrice"
               type="number"
@@ -842,7 +902,9 @@ export default function AdminCreateListingForm({
         </div>
         <SubmitButton
           idleLabel="Create listing"
-          pendingLabel={isPreparingUpload ? "Uploading images..." : "Creating listing..."}
+          pendingLabel={
+            isPreparingUpload ? "Uploading images..." : "Creating listing..."
+          }
           className="rounded-full bg-[#1a1a1a] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b] disabled:cursor-not-allowed disabled:opacity-70"
           pendingOverride={isPreparingUpload || undefined}
         />

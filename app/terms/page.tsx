@@ -10,48 +10,39 @@ export const metadata: Metadata = {
 const sections = [
   {
     title: "Business details",
-    body:
-      "This website is operated by Ex Kitchens, a trading name of ICON KITCHEN DESIGNS LTD, registered in England and Wales with company number 12082766 and VAT number GB350707906. Our registered office is 116 Brighton Road, Purley, England, CR8 4DB.",
+    body: "This website is operated by Ex Kitchens, a trading name of ICON KITCHEN DESIGNS LTD, registered in England and Wales with company number 12082766 and VAT number GB350707906. Our registered office is 116 Brighton Road, Purley, England, CR8 4DB.",
   },
   {
     title: "Using the marketplace",
-    body:
-      "You must create an account with accurate contact details before placing bids or starting buy-now checkout. Admin approval may be required before bidding is enabled.",
+    body: "You may contact us about a listing without creating an account. You must create an account with accurate contact details before placing bids or starting secure buy-now checkout. Admin approval may be required before bidding is enabled.",
   },
   {
     title: "Listing information",
-    body:
-      "Sizes, appliances, finishes, condition notes, and photographs are provided in good faith. Availability can change quickly, and buyers should confirm installation, transport, and fit before payment is finalised.",
+    body: "Sizes, appliances, finishes, condition notes, and photographs are provided in good faith. Availability can change quickly, and buyers should confirm installation, transport, and fit before payment is finalised.",
   },
   {
     title: "Auction bids",
-    body:
-      "A bid is a binding offer to purchase at the amount shown. Auctions can extend automatically near the closing time. Admins may cancel or close an auction where fraud, data error, duplicate stock, or operational risk makes that necessary.",
+    body: "A bid is a binding offer to purchase at the amount shown. Auctions can extend automatically near the closing time. Admins may cancel or close an auction where fraud, data error, duplicate stock, or operational risk makes that necessary.",
   },
   {
     title: "Buy-now checkout",
-    body:
-      "Starting buy-now checkout reserves the listing and creates an order. Payment, fulfilment timing, delivery, dismantling, and installation are confirmed during settlement.",
+    body: "Some fixed-price kitchens can be requested through a contact form, and some can be reserved directly through secure buy-now checkout. Starting buy-now checkout reserves the listing and creates an order. Payment, fulfilment timing, delivery, dismantling, and installation are confirmed during settlement.",
   },
   {
     title: "Payments and fulfilment",
-    body:
-      "Payment instructions, deadlines, and any reference details are issued through the order workflow. Orders may be cancelled or refunded where stock is unavailable, payment does not complete on time, identity or payment checks fail, or a dispute needs manual review.",
+    body: "Payment instructions, deadlines, and any reference details are issued through the order workflow. Orders may be cancelled or refunded where stock is unavailable, payment does not complete on time, identity or payment checks fail, or a dispute needs manual review.",
   },
   {
     title: "Account conduct",
-    body:
-      "We may suspend bidding, remove listings, or close accounts that submit false information, attempt self-bidding, abuse staff, or interfere with the integrity of the marketplace.",
+    body: "We may suspend bidding, remove listings, or close accounts that submit false information, attempt self-bidding, abuse staff, or interfere with the integrity of the marketplace.",
   },
   {
     title: "Liability and governing law",
-    body:
-      "To the fullest extent permitted by law, our liability is limited to the amount paid for the relevant order. These terms are governed by the laws of England and Wales, and disputes will be subject to the courts of England and Wales unless mandatory consumer law says otherwise.",
+    body: "To the fullest extent permitted by law, our liability is limited to the amount paid for the relevant order. These terms are governed by the laws of England and Wales, and disputes will be subject to the courts of England and Wales unless mandatory consumer law says otherwise.",
   },
   {
     title: "Contact",
-    body:
-      "For questions about these terms, contact Ex Kitchens at info@exkitchens.com.",
+    body: "For questions about these terms, contact Ex Kitchens at info@exkitchens.com or 07913546586.",
   },
 ];
 
@@ -73,8 +64,12 @@ export default function TermsPage() {
         <div className="mt-10 space-y-8">
           {sections.map((section) => (
             <section key={section.title}>
-              <h2 className="text-xl font-medium text-gray-900">{section.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-gray-600">{section.body}</p>
+              <h2 className="text-xl font-medium text-gray-900">
+                {section.title}
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-gray-600">
+                {section.body}
+              </p>
             </section>
           ))}
         </div>

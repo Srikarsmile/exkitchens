@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/env";
+import { isSupabaseAdminConfigured } from "@/lib/env";
 import type {
+  AdminEnquiryRecord,
   AdminOrderRecord,
   NotificationItem,
   AdminUserRecord,
@@ -72,7 +73,7 @@ export interface AdminCounts {
 }
 
 export async function getAdminCounts(): Promise<AdminCounts> {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseAdminConfigured()) {
     return {
       totalListings: 0,
       liveAuctions: 0,
@@ -118,7 +119,7 @@ export async function getAdminCounts(): Promise<AdminCounts> {
 }
 
 export async function getAdminListings(limit = 24) {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseAdminConfigured()) {
     return [] as AdminListingRecord[];
   }
 
@@ -150,7 +151,7 @@ export async function getAdminListings(limit = 24) {
 }
 
 export async function getAdminUsers(limit = 60) {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseAdminConfigured()) {
     return [] as AdminUserRecord[];
   }
 
@@ -183,7 +184,7 @@ export async function getAdminUsers(limit = 60) {
 }
 
 export async function getSellerOptions() {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseAdminConfigured()) {
     return [] as SellerOption[];
   }
 
@@ -210,7 +211,7 @@ export async function getSellerOptions() {
 }
 
 export async function getAdminOrders(limit = 24) {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseAdminConfigured()) {
     return [] as AdminOrderRecord[];
   }
 
@@ -255,14 +256,16 @@ type NotificationRow = {
 };
 
 export async function getAdminNotifications(userId: string, limit = 20) {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseAdminConfigured()) {
     return [] as NotificationItem[];
   }
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("notifications")
-    .select("id, kind, title, body, entity_type, entity_id, data, created_at, read_at")
+    .select(
+      "id, kind, title, body, entity_type, entity_id, data, created_at, read_at",
+    )
     .eq("profile_id", userId)
     .in("kind", [...ADMIN_NOTIFICATION_KINDS])
     .order("created_at", { ascending: false })
@@ -284,4 +287,66 @@ export async function getAdminNotifications(userId: string, limit = 20) {
     createdAt: row.created_at,
     readAt: row.read_at,
   }));
+}
+
+type EnquiryAuditLogRow = {
+  id: string;
+  entity_id: string;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export async function getAdminEnquiries(limit = 40) {
+  if (!isSupabaseAdminConfigured()) {
+    return [] as AdminEnquiryRecord[];
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("id, entity_id, payload, created_at")
+    .eq("entity_type", "listing_enquiry")
+    .eq("action", "listing_interest_submitted")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) {
+    console.error("Failed to load admin enquiries", error);
+    return [];
+  }
+
+  return (data as EnquiryAuditLogRow[]).map((row) => {
+    const payload = row.payload ?? {};
+
+    return {
+      id: row.entity_id || row.id,
+      listingId:
+        typeof payload.listing_id === "string" ? payload.listing_id : null,
+      listingSlug:
+        typeof payload.listing_slug === "string" ? payload.listing_slug : null,
+      listingTitle:
+        typeof payload.listing_title === "string"
+          ? payload.listing_title
+          : null,
+      fullName:
+        typeof payload.full_name === "string"
+          ? payload.full_name
+          : "Unknown buyer",
+      email: typeof payload.email === "string" ? payload.email : "",
+      phone: typeof payload.phone === "string" ? payload.phone : "",
+      note: typeof payload.note === "string" ? payload.note : null,
+      requestServices: Boolean(payload.request_services),
+      status:
+        payload.status === "contacted" || payload.status === "closed"
+          ? payload.status
+          : "new",
+      adminNote:
+        typeof payload.admin_note === "string" ? payload.admin_note : null,
+      createdAt: row.created_at,
+      acknowledgedAt:
+        typeof payload.acknowledged_at === "string"
+          ? payload.acknowledged_at
+          : null,
+    };
+  });
 }
