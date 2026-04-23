@@ -95,25 +95,23 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
 
   const sessionParams: BrandedCheckoutSessionCreateParams = {
     mode: "payment",
+    adaptive_pricing: {
+      enabled: false,
+    },
     customer_email: order.buyerEmail,
     client_reference_id: order.id,
     branding_settings: {
-      background_color: "#fafafa",
-      border_style: "pill",
-      button_color: "#3d7a44",
-      display_name: "ExKitchens",
-      font_family: "lora",
+      background_color: "#ffffff",
+      border_style: "rounded",
+      button_color: "#111111",
+      display_name: "Ex Kitchens",
+      font_family: "inter",
       logo: {
         type: "url",
         url: getAbsoluteUrl(siteUrl, "/assets/exkitchens_leaf_logo.png"),
       },
     },
-    custom_text: {
-      submit: {
-        message:
-          "You are reserving this kitchen with ExKitchens. We will confirm collection and handover details after payment.",
-      },
-    },
+    locale: "en-GB",
     metadata: {
       order_id: order.id,
       listing_id: order.listingId,
@@ -121,6 +119,11 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
       order_kind: order.kind,
     },
     payment_method_types: ["card"],
+    wallet_options: {
+      link: {
+        display: "never",
+      },
+    },
     line_items: [
       {
         quantity: 1,
