@@ -215,7 +215,6 @@ export default function ListingImageGallery({
           aria-modal="true"
           aria-label={`${title} image viewer`}
           className="fixed inset-0 z-50 bg-black/92 px-4 py-6"
-          onClick={() => setActiveIndex(null)}
         >
           <div className="mx-auto flex h-full w-full max-w-7xl flex-col">
             <div className="flex items-center justify-between gap-4 pb-4 text-white">
