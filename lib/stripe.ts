@@ -19,6 +19,22 @@ function getOrderLabel(kind: OrderKind) {
   return kind === "auction_win" ? "Auction settlement" : "Buy-now checkout";
 }
 
+type CheckoutBrandingSettings = {
+  background_color: string;
+  border_style: "pill" | "rectangular" | "rounded";
+  button_color: string;
+  display_name: string;
+  font_family: "default" | "inter" | "lora" | "open_sans";
+  logo: {
+    type: "url";
+    url: string;
+  };
+};
+
+type BrandedCheckoutSessionCreateParams = Stripe.Checkout.SessionCreateParams & {
+  branding_settings?: CheckoutBrandingSettings;
+};
+
 export interface CheckoutOrderDetails {
   id: string;
   amountPence: number;
@@ -26,9 +42,28 @@ export interface CheckoutOrderDetails {
   listingId: string;
   listingTitle: string | null;
   listingSlug: string | null;
+  listingHeroImageUrl?: string | null;
   buyerEmail: string;
   successPath?: string | null;
   cancelPath?: string | null;
+}
+
+function getAbsoluteUrl(siteUrl: string, value: string) {
+  return new URL(value, siteUrl).href;
+}
+
+function getCheckoutImageUrls({
+  siteUrl,
+  listingHeroImageUrl,
+}: {
+  siteUrl: string;
+  listingHeroImageUrl?: string | null;
+}) {
+  if (!listingHeroImageUrl) {
+    return [];
+  }
+
+  return [getAbsoluteUrl(siteUrl, listingHeroImageUrl)].slice(0, 8);
 }
 
 export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
@@ -41,11 +76,44 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
   const listingName = order.listingTitle || "Ex Kitchens order";
   const successPath = order.successPath || "/account?payment=success";
   const cancelPath = order.cancelPath || "/account?payment=cancel";
+  const productImages = getCheckoutImageUrls({
+    siteUrl,
+    listingHeroImageUrl: order.listingHeroImageUrl,
+  });
+  const productData: NonNullable<
+    NonNullable<
+      NonNullable<Stripe.Checkout.SessionCreateParams.LineItem["price_data"]>
+    >["product_data"]
+  > = {
+    name: listingName,
+    description: getOrderLabel(order.kind),
+  };
 
-  return stripe.checkout.sessions.create({
+  if (productImages.length > 0) {
+    productData.images = productImages;
+  }
+
+  const sessionParams: BrandedCheckoutSessionCreateParams = {
     mode: "payment",
     customer_email: order.buyerEmail,
     client_reference_id: order.id,
+    branding_settings: {
+      background_color: "#fafafa",
+      border_style: "pill",
+      button_color: "#3d7a44",
+      display_name: "ExKitchens",
+      font_family: "lora",
+      logo: {
+        type: "url",
+        url: getAbsoluteUrl(siteUrl, "/assets/exkitchens_leaf_logo.png"),
+      },
+    },
+    custom_text: {
+      submit: {
+        message:
+          "You are reserving this kitchen with ExKitchens. We will confirm collection and handover details after payment.",
+      },
+    },
     metadata: {
       order_id: order.id,
       listing_id: order.listingId,
@@ -59,16 +127,15 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
         price_data: {
           currency: "gbp",
           unit_amount: order.amountPence,
-          product_data: {
-            name: listingName,
-            description: getOrderLabel(order.kind),
-          },
+          product_data: productData,
         },
       },
     ],
     success_url: `${siteUrl}${successPath}`,
     cancel_url: `${siteUrl}${cancelPath}`,
-  });
+  };
+
+  return stripe.checkout.sessions.create(sessionParams);
 }
 
 export function getStripeWebhookClient() {

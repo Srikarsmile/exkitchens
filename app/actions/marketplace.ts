@@ -151,7 +151,7 @@ export async function createBuyNowOrderAction(
   const { data: orderRow } = await supabase
     .from("orders")
     .select(
-      "id, kind, status, amount_pence, listings!orders_listing_id_fkey(id, slug, title), buyer_profile_id",
+      "id, kind, status, amount_pence, listings!orders_listing_id_fkey(id, slug, title, hero_image_url), buyer_profile_id",
     )
     .eq("listing_id", parsed.data.listingId)
     .eq("buyer_profile_id", viewer.user.id)
@@ -175,6 +175,7 @@ export async function createBuyNowOrderAction(
         listingId: listing?.id ?? parsed.data.listingId,
         listingTitle: listing?.title ?? null,
         listingSlug: listing?.slug ?? parsed.data.slug,
+        listingHeroImageUrl: listing?.hero_image_url ?? null,
         buyerEmail,
         cancelPath: `/checkout/cancel?listing=${encodeURIComponent(parsed.data.slug)}`,
       });
@@ -241,7 +242,7 @@ export async function startOrderCheckoutAction(
   const { data: orderRow, error } = await supabase
     .from("orders")
     .select(
-      "id, kind, status, amount_pence, buyer_profile_id, listings!orders_listing_id_fkey(id, slug, title)",
+      "id, kind, status, amount_pence, buyer_profile_id, listings!orders_listing_id_fkey(id, slug, title, hero_image_url)",
     )
     .eq("id", parsed.data.orderId)
     .eq("buyer_profile_id", viewer.user.id)
@@ -275,6 +276,7 @@ export async function startOrderCheckoutAction(
       listingId: listing?.id ?? "",
       listingTitle: listing?.title ?? null,
       listingSlug: listing?.slug ?? null,
+      listingHeroImageUrl: listing?.hero_image_url ?? null,
       buyerEmail,
     });
   } catch (error) {
