@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AuthPageShell from "@/app/components/AuthPageShell";
 import RegisterForm from "@/app/register/RegisterForm";
 import { getViewer } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/env";
+
+export const metadata: Metadata = {
+  title: "Register | ExKitchens",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 interface RegisterPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

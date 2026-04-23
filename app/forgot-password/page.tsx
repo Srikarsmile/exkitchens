@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import AuthPageShell from "@/app/components/AuthPageShell";
 import ForgotPasswordForm from "@/app/forgot-password/ForgotPasswordForm";
 import { getViewer } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Forgot Password | ExKitchens",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 interface ForgotPasswordPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

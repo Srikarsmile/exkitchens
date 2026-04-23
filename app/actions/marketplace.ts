@@ -1,14 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createOrderCheckoutSession } from "@/lib/stripe";
 import { requireUser } from "@/lib/auth";
-import { deliverPendingNotificationEmails } from "@/lib/email";
 import { createClient } from "@/lib/supabase/server";
 import { isStripeConfigured, isSupabaseConfigured } from "@/lib/env";
 import { runMarketplaceMaintenance } from "@/lib/marketplace";
+import {
+  formatRetryAfter,
+  getClientAddress,
+  takeRateLimitToken,
+} from "@/lib/request-guards";
 
 export interface MarketplaceActionState {
   message?: string;
@@ -57,6 +62,22 @@ function revalidateMarketplacePaths(slug?: string | null, redirectPath?: string 
   if (redirectPath) {
     revalidatePath(redirectPath);
   }
+}
+
+async function limitMarketplaceMutation(
+  namespace: string,
+  identifier: string,
+  limit: number,
+  windowMs: number,
+) {
+  const requestHeaders = await headers();
+
+  return takeRateLimitToken({
+    namespace,
+    identifier: `${identifier}:${getClientAddress(requestHeaders)}`,
+    limit,
+    windowMs,
+  });
 }
 
 export async function toggleWatchlistAction(formData: FormData) {
@@ -119,6 +140,21 @@ export async function createBuyNowOrderAction(
   }
 
   const viewer = await requireUser(`/marketplace/${parsed.data.slug}`);
+  const checkoutAttemptLimit = await limitMarketplaceMutation(
+    "marketplace:create-buy-now",
+    `${viewer.user.id}:${parsed.data.listingId}`,
+    4,
+    10 * 60_000,
+  );
+
+  if (!checkoutAttemptLimit.ok) {
+    return {
+      message: `Too many checkout attempts. Try again ${formatRetryAfter(
+        checkoutAttemptLimit.retryAfterMs,
+      )}.`,
+    };
+  }
+
   const buyerEmail = viewer.user.email || viewer.profile?.email;
 
   if (!buyerEmail) {
@@ -145,7 +181,6 @@ export async function createBuyNowOrderAction(
     return { message: error.message };
   }
 
-  await deliverPendingNotificationEmails();
   revalidateMarketplacePaths(parsed.data.slug, `/marketplace/${parsed.data.slug}`);
 
   const { data: orderRow } = await supabase
@@ -185,7 +220,6 @@ export async function createBuyNowOrderAction(
         p_order_id: orderRow.id,
       });
       revalidateMarketplacePaths(parsed.data.slug, `/marketplace/${parsed.data.slug}`);
-      await deliverPendingNotificationEmails();
 
       return {
         message: "Could not open checkout right now. Please try again in a moment.",
@@ -200,7 +234,6 @@ export async function createBuyNowOrderAction(
       p_order_id: orderRow.id,
     });
     revalidateMarketplacePaths(parsed.data.slug, `/marketplace/${parsed.data.slug}`);
-    await deliverPendingNotificationEmails();
 
     return { message: "Checkout could not be opened right now." };
   }
@@ -238,6 +271,21 @@ export async function startOrderCheckoutAction(
   }
 
   const viewer = await requireUser("/account");
+  const checkoutResumeLimit = await limitMarketplaceMutation(
+    "marketplace:start-order-checkout",
+    `${viewer.user.id}:${parsed.data.orderId}`,
+    6,
+    10 * 60_000,
+  );
+
+  if (!checkoutResumeLimit.ok) {
+    return {
+      message: `Too many checkout attempts. Try again ${formatRetryAfter(
+        checkoutResumeLimit.retryAfterMs,
+      )}.`,
+    };
+  }
+
   const supabase = await createClient();
   const { data: orderRow, error } = await supabase
     .from("orders")
@@ -315,6 +363,21 @@ export async function cancelPendingBuyNowOrderAction(
   }
 
   const viewer = await requireUser(parsed.data.redirectPath || "/account");
+  const releaseLimit = await limitMarketplaceMutation(
+    "marketplace:cancel-buy-now",
+    `${viewer.user.id}:${parsed.data.orderId}`,
+    8,
+    10 * 60_000,
+  );
+
+  if (!releaseLimit.ok) {
+    return {
+      message: `Too many release attempts. Try again ${formatRetryAfter(
+        releaseLimit.retryAfterMs,
+      )}.`,
+    };
+  }
+
   const supabase = await createClient();
   const { data: orderRow, error } = await supabase
     .from("orders")
@@ -357,7 +420,6 @@ export async function cancelPendingBuyNowOrderAction(
     null;
 
   revalidateMarketplacePaths(listingSlug, parsed.data.redirectPath);
-  await deliverPendingNotificationEmails();
 
   return {
     success: true,

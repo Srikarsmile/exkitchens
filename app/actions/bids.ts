@@ -1,10 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { bidAmountToPence } from "@/lib/marketplace-shared";
 import { requireUser } from "@/lib/auth";
-import { deliverPendingNotificationEmails } from "@/lib/email";
+import {
+  formatRetryAfter,
+  getClientAddress,
+  takeRateLimitToken,
+} from "@/lib/request-guards";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { runMarketplaceMaintenance } from "@/lib/marketplace";
@@ -47,7 +52,25 @@ export async function placeBidAction(
     return { message: "Enter a valid bid amount." };
   }
 
-  await requireUser(`/marketplace/${parsed.data.slug}`);
+  const viewer = await requireUser(`/marketplace/${parsed.data.slug}`);
+  const requestHeaders = await headers();
+  const bidAttemptLimit = takeRateLimitToken({
+    namespace: "marketplace:bid",
+    identifier: `${viewer.user.id}:${parsed.data.auctionId}:${getClientAddress(
+      requestHeaders,
+    )}`,
+    limit: 12,
+    windowMs: 60_000,
+  });
+
+  if (!bidAttemptLimit.ok) {
+    return {
+      message: `Too many bid attempts. Try again ${formatRetryAfter(
+        bidAttemptLimit.retryAfterMs,
+      )}.`,
+    };
+  }
+
   const supabase = await createClient();
   await runMarketplaceMaintenance(supabase);
   const { error } = await supabase.rpc("place_bid", {
@@ -59,7 +82,6 @@ export async function placeBidAction(
     return { message: error.message };
   }
 
-  await deliverPendingNotificationEmails();
   revalidatePath("/");
   revalidatePath("/marketplace");
   revalidatePath(`/marketplace/${parsed.data.slug}`);

@@ -12,7 +12,7 @@ function isAuthorized(request: Request) {
   return request.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-export async function POST(request: Request) {
+async function handleNotificationDrain(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -20,4 +20,12 @@ export async function POST(request: Request) {
   const result = await deliverPendingNotificationEmails();
 
   return NextResponse.json(result);
+}
+
+export async function GET(request: Request) {
+  return handleNotificationDrain(request);
+}
+
+export async function POST(request: Request) {
+  return handleNotificationDrain(request);
 }

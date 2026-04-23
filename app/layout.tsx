@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display, Lora } from "next/font/google";
+import { getSiteUrl } from "@/lib/env";
 import "./globals.css";
 
 const inter = Inter({
@@ -17,8 +18,10 @@ const lora = Lora({
   subsets: ["latin"],
 });
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.exkitchens.com"),
+  metadataBase: new URL(siteUrl),
   title: "ExKitchens | Premium Ex-Display Kitchens Up to 70% Off",
   description:
     "The UK's largest marketplace for premium ex-display and pre-loved kitchens. Browse 2,000+ luxury kitchens from Bulthaup, Poggenpohl, Siematic and more. Up to 70% off retail.",
@@ -36,7 +39,7 @@ export const metadata: Metadata = {
     title: "ExKitchens | Premium Ex-Display Kitchens Up to 70% Off",
     description:
       "The UK's largest marketplace for premium ex-display and pre-loved kitchens. 2,000+ luxury kitchens from 100+ showrooms.",
-    url: "https://www.exkitchens.com",
+    url: siteUrl,
     siteName: "ExKitchens",
     images: [
       {

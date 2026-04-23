@@ -1,4 +1,3 @@
-import { deliverPendingNotificationEmails } from "@/lib/email";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 interface ReleasePendingBuyNowOrderOptions {
@@ -141,8 +140,6 @@ export async function releasePendingBuyNowOrder({
 
       if (notificationError) {
         console.error("Failed to notify checkout release", notificationError);
-      } else {
-        await deliverPendingNotificationEmails();
       }
     }
   }

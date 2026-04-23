@@ -7,6 +7,7 @@ import {
   removeListingImages,
 } from "@/lib/listing-image-storage";
 import { isSupabaseAdminConfigured, isSupabaseConfigured } from "@/lib/env";
+import { isSameOriginRequest } from "@/lib/request-guards";
 
 const uploadFileSchema = z.object({
   name: z.string().trim().min(1, "File name is required."),
@@ -51,6 +52,10 @@ async function requireAdminJson() {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request.url, request.headers)) {
+    return jsonError("Invalid request origin.", 403);
+  }
+
   const authError = await requireAdminJson();
 
   if (authError) {
@@ -85,6 +90,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!isSameOriginRequest(request.url, request.headers)) {
+    return jsonError("Invalid request origin.", 403);
+  }
+
   const authError = await requireAdminJson();
 
   if (authError) {

@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Footer from "@/app/components/Footer";
 import Navbar from "@/app/components/Navbar";
+
+export const metadata: Metadata = {
+  title: "Account | ExKitchens",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 interface AccountLayoutProps {
   params: Promise<Record<string, never>>;

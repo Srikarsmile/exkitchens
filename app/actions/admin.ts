@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
-import { deliverPendingNotificationEmails } from "@/lib/email";
 import {
   getListingImageHostPolicyMessage,
   isAllowedListingImageUrl,
@@ -443,7 +442,6 @@ export async function updateUserAccessAction(formData: FormData) {
   }
 
   revalidateAppPaths();
-  await deliverPendingNotificationEmails();
 }
 
 export async function deleteUserAction(formData: FormData) {
@@ -632,7 +630,6 @@ export async function updateListingStatusAction(formData: FormData) {
   }
 
   revalidateAppPaths(parsed.data.slug);
-  await deliverPendingNotificationEmails();
 }
 
 export async function updateListingSellerAction(formData: FormData) {
@@ -860,7 +857,6 @@ export async function updateOrderStatusAction(formData: FormData) {
   }
 
   revalidateAppPaths(parsed.data.listingSlug);
-  await deliverPendingNotificationEmails();
 }
 
 export async function deleteOrderAction(formData: FormData) {

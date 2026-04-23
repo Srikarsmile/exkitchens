@@ -1,7 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import AuthPageShell from "@/app/components/AuthPageShell";
 import ResetPasswordForm from "@/app/reset-password/ResetPasswordForm";
 import { getViewer } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Reset Password | ExKitchens",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function ResetPasswordPage() {
   const viewer = await getViewer();

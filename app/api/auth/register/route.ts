@@ -1,21 +1,36 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  formatRetryAfter,
+  getClientAddress,
+  getRateLimitHeaders,
+  isSameOriginRequest,
+  takeRateLimitToken,
+} from "@/lib/request-guards";
+import {
   normaliseNextPath,
   sendBrandedSignupVerification,
   signUpSchema,
 } from "@/lib/auth-flows";
 import { isSupabaseConfigured } from "@/lib/env";
 
+function jsonError(
+  message: string,
+  status: number,
+  headers?: HeadersInit,
+) {
+  return NextResponse.json({ ok: false, message }, { status, headers });
+}
+
 export async function POST(request: NextRequest) {
   if (!isSupabaseConfigured()) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message:
-          "Supabase is not configured yet. Add the environment variables before creating accounts.",
-      },
-      { status: 503 },
+    return jsonError(
+      "Supabase is not configured yet. Add the environment variables before creating accounts.",
+      503,
     );
+  }
+
+  if (!isSameOriginRequest(request.url, request.headers)) {
+    return jsonError("Invalid request origin.", 403);
   }
 
   const body = await request.json().catch(() => null);
@@ -38,6 +53,23 @@ export async function POST(request: NextRequest) {
       ok: true,
       redirectTo: `/login?checkEmail=1&next=${encodeURIComponent(nextPath)}`,
     });
+  }
+
+  const signupAttemptLimit = takeRateLimitToken({
+    namespace: "auth:register:ip",
+    identifier: getClientAddress(request.headers),
+    limit: 5,
+    windowMs: 15 * 60_000,
+  });
+
+  if (!signupAttemptLimit.ok) {
+    return jsonError(
+      `Too many signup attempts. Try again ${formatRetryAfter(
+        signupAttemptLimit.retryAfterMs,
+      )}.`,
+      429,
+      getRateLimitHeaders(signupAttemptLimit),
+    );
   }
 
   const result = await sendBrandedSignupVerification({

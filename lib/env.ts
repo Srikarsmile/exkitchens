@@ -98,7 +98,7 @@ export function getMarketplaceEmailFrom() {
 }
 
 export function getMarketplaceCronSecret() {
-  return process.env.MARKETPLACE_CRON_SECRET || "";
+  return process.env.MARKETPLACE_CRON_SECRET || process.env.CRON_SECRET || "";
 }
 
 export function getMarketplaceSupportPhone() {

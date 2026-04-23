@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { deliverPendingNotificationEmails } from "@/lib/email";
 import {
   getStripeEnv,
   isStripeConfigured,
@@ -135,8 +134,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (notifications.length > 0) {
     await supabase.from("notifications").insert(notifications);
   }
-
-  await deliverPendingNotificationEmails();
 }
 
 async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
