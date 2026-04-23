@@ -77,6 +77,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     typeof session.payment_intent === "string"
       ? session.payment_intent
       : session.id;
+  const paymentNotes = getCheckoutPaymentNotes(session);
 
   await supabase
     .from("orders")
@@ -84,7 +85,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       status: "paid",
       paid_at: now,
       payment_reference: paymentReference,
-      payment_notes: "Paid via Stripe Checkout",
+      payment_notes: paymentNotes,
     })
     .eq("id", orderId);
 
@@ -134,6 +135,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (notifications.length > 0) {
     await supabase.from("notifications").insert(notifications);
   }
+}
+
+function getCheckoutPaymentNotes(session: Stripe.Checkout.Session) {
+  const notes = ["Paid via Stripe Checkout"];
+  const checkoutEmail = session.customer_details?.email?.trim();
+  const checkoutPhone = session.customer_details?.phone?.trim();
+
+  if (checkoutEmail) {
+    notes.push(`Checkout email: ${checkoutEmail}`);
+  }
+
+  if (checkoutPhone) {
+    notes.push(`Checkout phone: ${checkoutPhone}`);
+  }
+
+  return notes.join("\n");
 }
 
 async function handleCheckoutExpired(session: Stripe.Checkout.Session) {

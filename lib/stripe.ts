@@ -98,7 +98,7 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
     adaptive_pricing: {
       enabled: false,
     },
-    customer_email: order.buyerEmail,
+    customer_creation: "always",
     client_reference_id: order.id,
     branding_settings: {
       background_color: "#ffffff",
@@ -117,8 +117,12 @@ export async function createOrderCheckoutSession(order: CheckoutOrderDetails) {
       listing_id: order.listingId,
       listing_slug: order.listingSlug || "",
       order_kind: order.kind,
+      buyer_account_email: order.buyerEmail,
     },
     payment_method_types: ["card"],
+    phone_number_collection: {
+      enabled: true,
+    },
     wallet_options: {
       link: {
         display: "never",
