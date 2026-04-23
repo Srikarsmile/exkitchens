@@ -228,7 +228,7 @@ export default async function ListingPage({
                       {formatMoney(buyNowPricePence)}
                     </p>
                     <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-[#3d7a44]">
-                      Final cost shown clearly
+                      Available now at this price
                     </p>
                   </div>
 
