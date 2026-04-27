@@ -14,11 +14,11 @@ const sections = [
   },
   {
     title: "Information we collect",
-    body: "We collect account details such as name, email address, phone number, bidder approval state, bids, watchlist entries, notifications, order history, and any information you send when you contact us about listings, delivery, dismantling, installation, or buy-now availability. This includes anonymous listing enquiries submitted without an account.",
+    body: "We collect account details such as name, email address, phone number, watchlist entries, notifications, order history, and any information you send when you contact us about listings, delivery, dismantling, installation, or buy-now availability. This includes anonymous listing enquiries submitted without an account.",
   },
   {
     title: "Why we use it",
-    body: "We use this information to verify bidders, operate auctions, manage checkout, process payments, respond to listing enquiries, communicate updates, prevent abuse, comply with legal and tax obligations, and maintain an audit trail for marketplace activity.",
+    body: "We use this information to manage checkout, process payments, respond to listing enquiries, communicate updates, prevent abuse, comply with legal and tax obligations, and maintain an audit trail for marketplace activity.",
   },
   {
     title: "Payments and service providers",
@@ -26,15 +26,15 @@ const sections = [
   },
   {
     title: "Who can see it",
-    body: "Public pages show listing information and a limited bid feed. Admins can review user, listing, bid, order, and enquiry records for operational and fraud-prevention purposes. Buyers and sellers can see their own orders and related notifications.",
+    body: "Public pages show listing information. Admins can review user, listing, order, and enquiry records for operational and fraud-prevention purposes. Buyers and sellers can see their own orders and related notifications.",
   },
   {
     title: "Retention",
-    body: "Account, bid, order, and enquiry records may be retained for operational, tax, fraud-prevention, lead-management, and dispute-resolution needs after a listing has ended.",
+    body: "Account, order, and enquiry records may be retained for operational, tax, fraud-prevention, lead-management, and dispute-resolution needs after a listing has ended.",
   },
   {
     title: "Your controls",
-    body: "You can sign in to review your saved listings, bids, notifications, and order activity. For correction, access, or deletion requests, contact us using the email address attached to your account.",
+    body: "You can sign in to review your saved listings, notifications, and order activity. For correction, access, or deletion requests, contact us using the email address attached to your account.",
   },
   {
     title: "Contact",
@@ -50,11 +50,11 @@ export default function PrivacyPage() {
           Privacy Policy
         </p>
         <h1 className="mt-3 text-4xl font-light tracking-tight text-gray-900">
-          Privacy for auctions, orders, and accounts
+          Privacy for orders and accounts
         </h1>
         <p className="mt-4 max-w-3xl text-base leading-7 text-gray-500">
-          This page explains how Ex Kitchens handles account, bidding, order,
-          and payment-related information.
+          This page explains how Ex Kitchens handles account, order, and
+          payment-related information.
         </p>
 
         <div className="mt-10 space-y-8">

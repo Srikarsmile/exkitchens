@@ -2,22 +2,18 @@
 
 import { useState, useRef, useEffect, type MouseEvent } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Clock, Tag } from "lucide-react";
+import { ArrowRight, Tag } from "lucide-react";
 import Link from "next/link";
 import ListingImage from "@/app/components/ListingImage";
 import type { ListingCardData } from "@/lib/marketplace-shared";
 import {
-  calculatePercentageOff,
   formatMoney,
-  formatTimeRemaining,
   getListingConditionLabel,
   getVisibleListingTags,
 } from "@/lib/marketplace-shared";
 import { getShimmerBlurDataUrl } from "@/lib/image-placeholder";
 
 const cardBlurDataUrl = getShimmerBlurDataUrl(720, 540);
-
-type FilterType = "all" | "buy" | "auction";
 
 function TiltCard({ children }: { children: React.ReactNode }) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -73,17 +69,6 @@ export default function FeaturedKitchens({
 }: {
   items: ListingCardData[];
 }) {
-  const [filter, setFilter] = useState<FilterType>("all");
-
-  const filtered =
-    filter === "all"
-      ? items
-      : items.filter((item) =>
-          filter === "auction"
-            ? item.saleType === "auction"
-            : item.saleType === "buy_now",
-        );
-
   return (
     <section id="kitchens" className="w-full py-28 bg-white relative">
       <div className="max-w-7xl mx-auto px-6 md:px-8">
@@ -106,26 +91,13 @@ export default function FeaturedKitchens({
               Premium ex-display kitchens from {"\u00a3"}1,950.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {(["all", "buy", "auction"] as FilterType[]).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                aria-pressed={filter === f}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                  filter === f
-                    ? "bg-[#1a1a1a] text-white"
-                    : "bg-gray-100 text-gray-500 hover:text-gray-800 hover:bg-gray-200"
-                }`}
-              >
-                {f === "all" ? "All" : f === "buy" ? "Buy Now" : "Auctions"}
-              </button>
-            ))}
+          <div className="rounded-full bg-[#f4f7f4] px-5 py-2 text-sm font-medium text-[#3d7a44]">
+            Buy-now stock
           </div>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.length === 0 ? (
+          {items.length === 0 ? (
             <div className="col-span-full rounded-[2rem] border border-dashed border-gray-200 bg-[#fafafa] px-6 py-12 text-center">
               <h3 className="text-xl font-medium text-gray-900">
                 No featured kitchens yet
@@ -145,13 +117,9 @@ export default function FeaturedKitchens({
             </div>
           ) : null}
 
-          {filtered.map((item, index) => {
+          {items.map((item, index) => {
             const buyNowPricePence =
               item.buyNowPricePence ?? item.currentPricePence;
-            const buyNowDiscountPercent = calculatePercentageOff(
-              item.originalPricePence,
-              buyNowPricePence,
-            );
             const listingConditionLabel = getListingConditionLabel(
               item.title,
               item.summary,
@@ -170,19 +138,16 @@ export default function FeaturedKitchens({
               >
                 <TiltCard>
                   <div className="group relative rounded-xl overflow-hidden bg-white border border-gray-100 hover:border-gray-200 active:border-[#3d7a44]/30 transition-all cursor-pointer hover:shadow-xl active:shadow-lg duration-500">
-                    <div className="relative h-[240px] w-full overflow-hidden bg-gray-50">
+                    <Link
+                      href={`/marketplace/${item.slug}`}
+                      aria-label={`View ${item.title}`}
+                      className="relative block h-[240px] w-full overflow-hidden bg-gray-50"
+                    >
                       <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-2">
-                        {item.saleType === "auction" ? (
-                          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold">
-                            <Clock className="w-3 h-3" />
-                            {formatTimeRemaining(item.auction?.endAt)}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#3d7a44]/80 backdrop-blur-md text-white text-[11px] font-semibold">
-                            <Tag className="w-3 h-3" />
-                            Buy Now
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#3d7a44]/80 backdrop-blur-md text-white text-[11px] font-semibold">
+                          <Tag className="w-3 h-3" />
+                          Buy Now
+                        </div>
                         {listingConditionLabel ? (
                           <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/90 backdrop-blur-md text-[11px] font-semibold text-gray-700">
                             {listingConditionLabel}
@@ -207,7 +172,7 @@ export default function FeaturedKitchens({
                         blurDataURL={cardBlurDataUrl}
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
                       />
-                    </div>
+                    </Link>
 
                     <div className="p-5">
                       {visibleTags.length > 0 ? (
@@ -228,32 +193,24 @@ export default function FeaturedKitchens({
                       </h3>
 
                       <div className="flex items-end justify-between mt-4 pt-4 border-t border-gray-100">
-                        {item.saleType === "buy_now" ? (
-                          <div>
-                            <span className="text-gray-300 line-through text-xs block">
-                              {item.originalPricePence
-                                ? `RRP ${formatMoney(item.originalPricePence)}`
-                                : "RRP on request"}
-                            </span>
+                        <div>
+                          <span className="text-[#3d7a44] uppercase tracking-wider text-[10px] font-bold block">
+                            Buy now price
+                          </span>
+                          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                             <span className="text-2xl font-medium text-gray-900">
                               {formatMoney(buyNowPricePence)}
                             </span>
-                            {buyNowDiscountPercent ? (
-                              <span className="mt-2 inline-flex rounded-full bg-[#e8f3e9] px-2.5 py-1 text-[11px] font-medium text-[#3d7a44]">
-                                {buyNowDiscountPercent}% off retail
+                            {item.originalPricePence ? (
+                              <span className="text-xs text-gray-400">
+                                was{" "}
+                                <span className="line-through">
+                                  {formatMoney(item.originalPricePence)}
+                                </span>
                               </span>
                             ) : null}
                           </div>
-                        ) : (
-                          <div>
-                            <span className="text-[#3d7a44] uppercase tracking-wider text-[10px] font-bold block">
-                              Current Bid
-                            </span>
-                            <span className="text-2xl font-medium text-gray-900">
-                              {formatMoney(item.currentPricePence)}
-                            </span>
-                          </div>
-                        )}
+                        </div>
 
                         <Link
                           href={`/marketplace/${item.slug}`}
@@ -284,7 +241,7 @@ export default function FeaturedKitchens({
           >
             Browse All Kitchens
             <span className="text-[10px] uppercase tracking-wider text-[#3d7a44] bg-white px-2 py-0.5 rounded">
-              Live
+              For sale
             </span>
           </Link>
         </motion.div>

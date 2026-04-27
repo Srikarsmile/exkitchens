@@ -265,7 +265,7 @@ export async function createListingAction(
     galleryUrls: formData.get("galleryUrls"),
     condition: formData.get("condition"),
     tags: formData.get("tags"),
-    saleType: formData.get("saleType"),
+    saleType: "buy_now",
     originalPrice: formData.get("originalPrice") || undefined,
     buyNowPrice: formData.get("buyNowPrice") || undefined,
     startingBid: formData.get("startingBid") || undefined,

@@ -22,9 +22,9 @@ const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "ExKitchens | Premium Ex-Display Kitchens Up to 70% Off",
+  title: "ExKitchens | Premium Ex-Display Kitchens For Sale",
   description:
-    "The UK's largest marketplace for premium ex-display and pre-loved kitchens. Browse 2,000+ luxury kitchens from Bulthaup, Poggenpohl, Siematic and more. Up to 70% off retail.",
+    "The UK's marketplace for premium ex-display and pre-loved kitchens. Browse luxury kitchens from Bulthaup, Poggenpohl, Siematic and more with original-price savings shown upfront.",
   keywords: [
     "ex-display kitchens",
     "luxury kitchens",
@@ -32,13 +32,13 @@ export const metadata: Metadata = {
     "Bulthaup",
     "Poggenpohl",
     "Siematic",
-    "kitchen auction",
+    "used kitchens",
     "UK kitchens",
   ],
   openGraph: {
-    title: "ExKitchens | Premium Ex-Display Kitchens Up to 70% Off",
+    title: "ExKitchens | Premium Ex-Display Kitchens For Sale",
     description:
-      "The UK's largest marketplace for premium ex-display and pre-loved kitchens. 2,000+ luxury kitchens from 100+ showrooms.",
+      "The UK's marketplace for premium ex-display and pre-loved kitchens with clear buy-now pricing.",
     url: siteUrl,
     siteName: "ExKitchens",
     images: [
@@ -54,9 +54,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ExKitchens | Premium Ex-Display Kitchens Up to 70% Off",
+    title: "ExKitchens | Premium Ex-Display Kitchens For Sale",
     description:
-      "The UK's largest marketplace for premium ex-display and pre-loved kitchens. Up to 70% off retail.",
+      "Browse premium ex-display and pre-loved kitchens with clear buy-now pricing.",
     images: ["/assets/og_leaf.png"],
   },
   robots: {
@@ -78,6 +78,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${inter.variable} ${playfair.variable} ${lora.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#fafafa] text-[#111111] font-sans selection:bg-green-600/20 selection:text-green-900">

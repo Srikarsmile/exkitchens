@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import CancelReservationButton from "@/app/account/CancelReservationButton";
 import OrderCheckoutButton from "@/app/account/OrderCheckoutButton";
-import BidForm from "@/app/marketplace/[slug]/BidForm";
 import BuyNowCard from "@/app/marketplace/[slug]/BuyNowCard";
 import ListingInterestCard from "@/app/marketplace/[slug]/ListingInterestCard";
 import ListingImageGallery from "@/app/marketplace/[slug]/ListingImageGallery";
@@ -20,13 +19,12 @@ import {
 } from "@/lib/env";
 import {
   getListingBySlug,
+  getMarketplaceListings,
   getPublishedListingSeoBySlug,
 } from "@/lib/marketplace";
 import {
-  calculatePercentageOff,
   formatDateTime,
   formatMoney,
-  formatTimeRemaining,
   getListingConditionLabel,
   getVisibleListingTags,
 } from "@/lib/marketplace-shared";
@@ -69,39 +67,46 @@ export default async function ListingPage({
   const supportPhoneHref = getMarketplaceSupportPhoneHref();
   const contactEmail = getMarketplaceContactEmail();
   const contactEmailHref = getMarketplaceContactEmailHref();
-  const { listing, bids } = await getListingBySlug(slug, viewer.user?.id);
+  const [{ listing }, marketplaceListings] = await Promise.all([
+    getListingBySlug(slug, viewer.user?.id),
+    getMarketplaceListings(),
+  ]);
 
   if (!listing) {
     notFound();
   }
 
+  const listingNavigationItems = marketplaceListings.map((item) => ({
+    slug: item.slug,
+    title: item.title,
+  }));
+  const currentListingIndex = listingNavigationItems.findIndex(
+    (item) => item.slug === listing.slug,
+  );
+  const hasListingNavigation =
+    listingNavigationItems.length > 1 && currentListingIndex >= 0;
+  const previousListing = hasListingNavigation
+    ? listingNavigationItems[
+        (currentListingIndex - 1 + listingNavigationItems.length) %
+          listingNavigationItems.length
+      ]
+    : null;
+  const nextListing = hasListingNavigation
+    ? listingNavigationItems[
+        (currentListingIndex + 1) % listingNavigationItems.length
+      ]
+    : null;
   const heroImage = listing.heroImageUrl || "/assets/kitchen_nano_square.jpg";
   const galleryImages = Array.from(
     new Set(listing.galleryUrls.filter(Boolean)),
   );
-  const canBid =
-    Boolean(viewer.user) &&
-    (viewer.profile?.role === "admin" ||
-      viewer.profile?.bidder_status === "approved");
   const isAdminViewer = viewer.profile?.role === "admin";
-  const isLiveAuction =
-    listing.saleType === "auction" && listing.auction?.status === "live";
   const buyNowAvailable =
     listing.saleType === "buy_now" &&
     listing.status === "published" &&
     !listing.order;
   const buyNowPricePence =
     listing.buyNowPricePence ?? listing.currentPricePence;
-  const buyNowDiscountPercent = calculatePercentageOff(
-    listing.originalPricePence,
-    buyNowPricePence,
-  );
-  const savingsPence =
-    listing.originalPricePence != null &&
-    buyNowPricePence != null &&
-    listing.originalPricePence > buyNowPricePence
-      ? listing.originalPricePence - buyNowPricePence
-      : null;
   const listingConditionLabel = getListingConditionLabel(
     listing.title,
     listing.summary,
@@ -129,13 +134,10 @@ export default async function ListingPage({
     <main id="main-content" className="mx-auto w-full max-w-7xl px-6 py-12">
       <RealtimeRefresh
         channel={`listing-${listing.id}`}
-        enabled={Boolean(listing.auction || viewer.user)}
+        enabled={Boolean(viewer.user)}
         pollMs={30000}
         targets={[
           { table: "listings", filter: `id=eq.${listing.id}` },
-          ...(listing.auction
-            ? [{ table: "auctions", filter: `id=eq.${listing.auction.id}` }]
-            : []),
           ...(viewer.user
             ? [
                 {
@@ -148,13 +150,41 @@ export default async function ListingPage({
       />
 
       <div className="space-y-8">
-        <Link
-          href="/marketplace"
-          className="inline-flex items-center gap-2 text-sm font-medium text-[#3d7a44] transition hover:text-[#2f6135]"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to marketplace
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link
+            href="/marketplace"
+            className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 transition hover:text-[#1a1a1a]"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back to marketplace
+          </Link>
+
+          {previousListing && nextListing ? (
+            <nav
+              aria-label="Listing navigation"
+              className="flex flex-wrap items-center gap-2"
+            >
+              <Link
+                href={`/marketplace/${previousListing.slug}`}
+                className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-black"
+                style={{ backgroundColor: "#000000", color: "#ffffff", opacity: 1 }}
+                title={previousListing.title}
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                Previous kitchen
+              </Link>
+              <Link
+                href={`/marketplace/${nextListing.slug}`}
+                className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-neutral-800"
+                style={{ backgroundColor: "#000000", color: "#ffffff", opacity: 1 }}
+                title={nextListing.title}
+              >
+                Next kitchen
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </nav>
+          ) : null}
+        </div>
 
         <section className="space-y-4">
           <ListingImageGallery
@@ -218,104 +248,35 @@ export default async function ListingPage({
             </div>
 
             <div className="rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
-              {listing.saleType === "buy_now" ? (
-                <div className="grid gap-6 md:grid-cols-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      Offer price
-                    </p>
-                    <p className="mt-2 text-3xl font-medium text-gray-900">
+              <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+                    Buy now price
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-2">
+                    <p className="text-3xl font-medium text-gray-900">
                       {formatMoney(buyNowPricePence)}
                     </p>
-                    <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-[#3d7a44]">
-                      Available now at this price
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      RRP
-                    </p>
-                    <p className="mt-2 text-2xl font-medium text-gray-400 line-through">
-                      {listing.originalPricePence
-                        ? formatMoney(listing.originalPricePence)
-                        : "On request"}
-                    </p>
-                    <p className="mt-2 text-xs text-gray-500">
-                      Original showroom reference price
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      Discount
-                    </p>
-                    <p className="mt-2 text-2xl font-medium text-[#3d7a44]">
-                      {buyNowDiscountPercent
-                        ? `${buyNowDiscountPercent}% off`
-                        : "Seller offer"}
-                    </p>
-                    <p className="mt-2 text-xs text-gray-500">
-                      {savingsPence
-                        ? `Save ${formatMoney(savingsPence)} against retail`
-                        : "Discount shown when an RRP is available"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      Location
-                    </p>
-                    <p className="mt-2 text-base text-gray-800">
-                      {listing.location || "UK"}
-                    </p>
+                    {listing.originalPricePence ? (
+                      <p className="text-lg font-medium text-gray-400">
+                        was{" "}
+                        <span className="line-through">
+                          {formatMoney(listing.originalPricePence)}
+                        </span>
+                      </p>
+                    ) : null}
                   </div>
                 </div>
-              ) : (
-                <div className="grid gap-6 md:grid-cols-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      Price
-                    </p>
-                    <p className="mt-2 text-2xl font-medium text-gray-900">
-                      {formatMoney(listing.currentPricePence)}
-                    </p>
-                  </div>
 
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      Location
-                    </p>
-                    <p className="mt-2 text-base text-gray-800">
-                      {listing.location || "UK"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      Auction timer
-                    </p>
-                    <p className="mt-2 text-base text-gray-800">
-                      {listing.auction
-                        ? formatTimeRemaining(listing.auction.endAt)
-                        : "N/A"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                      Reserve
-                    </p>
-                    <p className="mt-2 text-base text-gray-800">
-                      {listing.reservePricePence
-                        ? listing.auction?.reserveMet
-                          ? "Reserve met"
-                          : "Reserve active"
-                        : "No reserve"}
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+                    Location
+                  </p>
+                  <p className="mt-2 text-base text-gray-800">
+                    {listing.location || "UK"}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
@@ -425,69 +386,6 @@ export default async function ListingPage({
                   ) : null}
                 </div>
               </div>
-            ) : isLiveAuction && listing.auction ? (
-              viewer.user ? (
-                ownsListing && isAdminViewer ? (
-                  <BidForm
-                    auctionId={listing.auction.id}
-                    slug={listing.slug}
-                    minimumBidPence={listing.auction.minimumNextBidPence}
-                    previewOnly
-                  />
-                ) : ownsListing ? (
-                  <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-                    <h2 className="text-xl font-medium text-gray-900">
-                      Seller view
-                    </h2>
-                    <p className="mt-3 text-sm leading-6 text-gray-500">
-                      This listing is assigned to your account as the seller, so
-                      live bidding is hidden here.
-                    </p>
-                  </div>
-                ) : canBid ? (
-                  <BidForm
-                    auctionId={listing.auction.id}
-                    slug={listing.slug}
-                    minimumBidPence={listing.auction.minimumNextBidPence}
-                  />
-                ) : (
-                  <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 shadow-sm">
-                    <h2 className="text-xl font-medium text-amber-900">
-                      Approval required
-                    </h2>
-                    <p className="mt-3 text-sm leading-6 text-amber-800">
-                      Your account is signed in, but bidding starts after an
-                      admin approves the profile.
-                    </p>
-                    <div className="mt-5 flex">
-                      <Link
-                        href="/account"
-                        className="inline-flex w-full items-center justify-center rounded-full bg-amber-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-amber-950 sm:w-auto"
-                      >
-                        Open account
-                      </Link>
-                    </div>
-                  </div>
-                )
-              ) : (
-                <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-xl font-medium text-gray-900">
-                    Sign in to bid
-                  </h2>
-                  <p className="mt-3 text-sm leading-6 text-gray-500">
-                    Buyers must sign in and be approved before they can join a
-                    live auction.
-                  </p>
-                  <div className="mt-5 flex">
-                    <Link
-                      href={`/login?next=${encodeURIComponent(`/marketplace/${listing.slug}`)}`}
-                      className="inline-flex w-full items-center justify-center rounded-full bg-[#3d7a44] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2f6135] sm:w-auto"
-                    >
-                      Sign in
-                    </Link>
-                  </div>
-                </div>
-              )
             ) : buyNowAvailable ? (
               viewer.user ? (
                 ownsListing && isAdminViewer ? (
@@ -566,56 +464,15 @@ export default async function ListingPage({
             ) : (
               <div className="rounded-[2rem] border border-gray-200 bg-white p-6 shadow-sm">
                 <h2 className="text-xl font-medium text-gray-900">
-                  {listing.saleType === "auction"
-                    ? "Auction status"
-                    : "Listing status"}
+                  Listing status
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-gray-500">
-                  {listing.saleType === "auction"
-                    ? listing.auction
-                      ? `${listing.auction.status[0].toUpperCase()}${listing.auction.status.slice(1)}. Starts ${formatDateTime(listing.auction.startAt)} and ends ${formatDateTime(listing.auction.endAt)}.`
-                      : "This auction is not currently available."
-                    : listing.status === "sold" && listing.settlementOrderId
-                      ? "This kitchen is currently in checkout and temporarily unavailable."
-                      : "This listing is already reserved or no longer available."}
+                  {listing.status === "sold" && listing.settlementOrderId
+                    ? "This kitchen is currently in checkout and temporarily unavailable."
+                    : "This listing is already reserved or no longer available."}
                 </p>
               </div>
             )}
-
-            <div className="rounded-[2rem] bg-white p-6 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
-              <h2 className="text-xl font-medium text-gray-900">
-                Latest bid activity
-              </h2>
-              <div className="mt-5 space-y-3">
-                {bids.length === 0 ? (
-                  <p className="text-sm text-gray-500">No bids yet.</p>
-                ) : (
-                  bids.map((bid) => (
-                    <div
-                      key={bid.id}
-                      className="rounded-2xl bg-[#fafafa] px-4 py-3 text-sm text-gray-700"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-medium text-gray-900">
-                          {formatMoney(bid.amountPence)}
-                        </span>
-                        <span className="text-xs uppercase tracking-[0.2em] text-gray-400">
-                          {new Date(bid.createdAt).toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-gray-400">
-                        {bid.isCurrent ? "Current leading bid" : "Accepted bid"}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
           </aside>
         </div>
       </div>

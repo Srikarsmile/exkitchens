@@ -112,7 +112,7 @@ export default function HeroSection({ splineUrl }: HeroSectionProps) {
         >
           Premium ex-display kitchens.
           <br className="hidden md:block" />
-          Up to 70% off retail.
+          Original-price savings shown upfront.
         </motion.p>
 
         <motion.div

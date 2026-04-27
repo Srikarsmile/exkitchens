@@ -184,16 +184,11 @@ export default function AdminCreateListingForm({
   defaultSellerProfileId,
 }: AdminCreateListingFormProps) {
   const [state, action] = useActionState(createListingAction, initialState);
-  const [saleType, setSaleType] = useState<"auction" | "buy_now">("auction");
   const [selectedSellerProfileId, setSelectedSellerProfileId] = useState(
     defaultSellerProfileId,
   );
   const [heroPreview, setHeroPreview] = useState<PreviewImage[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<PreviewImage[]>([]);
-  const [auctionStartsAtOffsetMinutes, setAuctionStartsAtOffsetMinutes] =
-    useState("");
-  const [auctionEndsAtOffsetMinutes, setAuctionEndsAtOffsetMinutes] =
-    useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isPreparingUpload, setIsPreparingUpload] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -242,20 +237,6 @@ export default function AdminCreateListingForm({
         url: URL.createObjectURL(file),
       }));
     });
-  }
-
-  function getOffsetMinutes(value: string) {
-    if (!value) {
-      return "";
-    }
-
-    const parsed = new Date(value);
-
-    if (Number.isNaN(parsed.getTime())) {
-      return "";
-    }
-
-    return String(parsed.getTimezoneOffset());
   }
 
   function clearUploadedImageFields() {
@@ -456,16 +437,7 @@ export default function AdminCreateListingForm({
       className="space-y-8"
       onSubmit={handleSubmit}
     >
-      <input
-        type="hidden"
-        name="auctionStartsAtOffsetMinutes"
-        value={auctionStartsAtOffsetMinutes}
-      />
-      <input
-        type="hidden"
-        name="auctionEndsAtOffsetMinutes"
-        value={auctionEndsAtOffsetMinutes}
-      />
+      <input type="hidden" name="saleType" value="buy_now" />
       <input
         ref={uploadedHeroUrlRef}
         type="hidden"
@@ -712,26 +684,13 @@ export default function AdminCreateListingForm({
 
       <Section
         eyebrow="Step 3"
-        title="Choose the sale setup"
-        description="Pick whether the kitchen is auction-only or buy-now, then fill the pricing fields that apply."
+        title="Set the selling price"
+        description="Add the original showroom price and the buy-now price buyers can reserve at today."
       >
         <div className="grid gap-5 md:grid-cols-2">
-          <Field
-            label="Sale type"
-            hint="Auction shows bidding and timing fields. Buy now keeps the form shorter."
-          >
-            <select
-              name="saleType"
-              value={saleType}
-              onChange={(event) =>
-                setSaleType(event.currentTarget.value as "auction" | "buy_now")
-              }
-              className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
-            >
-              <option value="auction">Auction</option>
-              <option value="buy_now">Buy now</option>
-            </select>
-          </Field>
+          <div className="rounded-2xl border border-[#dfe8df] bg-[#f7faf7] px-4 py-3 text-sm text-gray-700 md:col-span-2">
+            Listings are temporarily published as buy-now only.
+          </div>
 
           <Field
             label="Original price (GBP)"
@@ -747,115 +706,31 @@ export default function AdminCreateListingForm({
             />
           </Field>
 
-          {saleType === "buy_now" ? (
-            <Field label="Buy now price (GBP)" span={2}>
+          <Field label="Buy now price (GBP)">
+            <input
+              name="buyNowPrice"
+              type="number"
+              min="0"
+              step="1"
+              className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
+              placeholder="21500"
+            />
+          </Field>
+
+          <Field
+            label="Feature on homepage"
+            hint="Featured listings appear in homepage highlights."
+          >
+            <label className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
               <input
-                name="buyNowPrice"
-                type="number"
-                min="0"
-                step="1"
-                className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
-                placeholder="21500"
+                type="checkbox"
+                name="featured"
+                className="h-4 w-4 accent-[#3d7a44]"
               />
-            </Field>
-          ) : (
-            <>
-              <Field label="Starting bid (GBP)">
-                <input
-                  name="startingBid"
-                  type="number"
-                  min="0"
-                  step="1"
-                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
-                  placeholder="9500"
-                />
-              </Field>
-
-              <Field label="Bid increment (GBP)">
-                <input
-                  name="bidIncrement"
-                  type="number"
-                  min="1"
-                  step="1"
-                  defaultValue="50"
-                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
-                />
-              </Field>
-
-              <Field label="Reserve price (GBP)">
-                <input
-                  name="reservePrice"
-                  type="number"
-                  min="1"
-                  step="1"
-                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
-                  placeholder="12000"
-                />
-              </Field>
-
-              <Field
-                label="Feature on homepage"
-                hint="Featured listings appear in homepage highlights."
-              >
-                <label className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    name="featured"
-                    className="h-4 w-4 accent-[#3d7a44]"
-                  />
-                  Show in featured sections
-                </label>
-              </Field>
-
-              <Field label="Auction start">
-                <input
-                  name="auctionStartsAt"
-                  type="datetime-local"
-                  onChange={(event) =>
-                    setAuctionStartsAtOffsetMinutes(
-                      getOffsetMinutes(event.currentTarget.value),
-                    )
-                  }
-                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
-                />
-              </Field>
-
-              <Field
-                label="Auction end"
-                hint="These times are saved in your local timezone, including daylight-saving changes."
-              >
-                <input
-                  name="auctionEndsAt"
-                  type="datetime-local"
-                  onChange={(event) =>
-                    setAuctionEndsAtOffsetMinutes(
-                      getOffsetMinutes(event.currentTarget.value),
-                    )
-                  }
-                  className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#3d7a44]"
-                />
-              </Field>
-            </>
-          )}
-
-          {saleType === "buy_now" ? (
-            <>
-              <Field
-                label="Feature on homepage"
-                hint="Featured listings appear in homepage highlights."
-              >
-                <label className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    name="featured"
-                    className="h-4 w-4 accent-[#3d7a44]"
-                  />
-                  Show in featured sections
-                </label>
-              </Field>
-              <div className="hidden md:block" />
-            </>
-          ) : null}
+              Show in featured sections
+            </label>
+          </Field>
+          <div className="hidden md:block" />
         </div>
       </Section>
 

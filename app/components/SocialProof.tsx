@@ -32,7 +32,7 @@ const testimonials = [
   {
     name: "Olivia & Tom R.",
     location: "Bath",
-    text: "The auction process was exciting and transparent. We won a gorgeous Poggenpohl kitchen for a fraction of what we\u2019d budgeted. Truly the smarter way to get a luxury kitchen.",
+    text: "The price was clear from the first viewing, with the original showroom price shown beside the buy-now price. We reserved a gorgeous Poggenpohl kitchen for a fraction of what we\u2019d budgeted.",
     rating: 5,
     kitchen: "Poggenpohl +Segmento",
     saved: "\u00a331,000",

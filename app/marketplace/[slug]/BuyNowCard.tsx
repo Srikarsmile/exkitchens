@@ -5,10 +5,7 @@ import {
   createBuyNowOrderAction,
   type MarketplaceActionState,
 } from "@/app/actions/marketplace";
-import {
-  calculatePercentageOff,
-  formatMoney,
-} from "@/lib/marketplace-shared";
+import { formatMoney } from "@/lib/marketplace-shared";
 import SubmitButton from "@/app/components/forms/SubmitButton";
 
 const initialState: MarketplaceActionState = {};
@@ -33,7 +30,6 @@ export default function BuyNowCard({
   previewOnly = false,
 }: BuyNowCardProps) {
   const [state, action] = useActionState(createBuyNowOrderAction, initialState);
-  const discountPercent = calculatePercentageOff(originalPricePence, amountPence);
 
   return (
     <form
@@ -56,23 +52,21 @@ export default function BuyNowCard({
 
       <div className="rounded-[1.5rem] bg-[#f7f7f4] px-4 py-4">
         <p className="text-xs uppercase tracking-[0.24em] text-gray-400">
-          Offer price
+          Buy now price
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <p className="text-4xl font-medium text-gray-900">
             {formatMoney(amountPence)}
           </p>
           {originalPricePence ? (
-            <p className="text-base text-gray-400 line-through">
-              RRP {formatMoney(originalPricePence)}
+            <p className="text-base text-gray-400">
+              was{" "}
+              <span className="line-through">
+                {formatMoney(originalPricePence)}
+              </span>
             </p>
           ) : null}
         </div>
-        {discountPercent ? (
-          <p className="mt-3 inline-flex rounded-full bg-[#e8f3e9] px-3 py-1 text-sm font-medium text-[#3d7a44]">
-            {discountPercent}% off retail
-          </p>
-        ) : null}
       </div>
 
       {previewOnly ? (

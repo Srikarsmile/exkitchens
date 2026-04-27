@@ -193,13 +193,16 @@ export default function ListingImageGallery({
                 <button
                   key={`${imageUrl}-${index}`}
                   type="button"
-                  onClick={() => setSelectedIndex(index)}
-                    className={`group relative h-24 w-32 shrink-0 overflow-hidden rounded-2xl border bg-[#f3f3f3] transition ${
+                  onClick={() => {
+                    setSelectedIndex(index);
+                    setActiveIndex(index);
+                  }}
+                  className={`group relative h-24 w-32 shrink-0 overflow-hidden rounded-2xl border bg-[#f3f3f3] transition ${
                     index === selectedImageIndex
                       ? "border-[#3d7a44] ring-2 ring-[#3d7a44]/18"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
-                  aria-label={`Select image ${index + 1} for ${title}`}
+                  aria-label={`Open larger image ${index + 1} for ${title}`}
                 >
                   <ListingImage
                     src={imageUrl}
@@ -295,7 +298,7 @@ export default function ListingImageGallery({
               <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
                 {images.map((imageUrl, index) => (
                   <button
-                    key={imageUrl}
+                    key={`${imageUrl}-${index}`}
                     type="button"
                     onClick={() => setActiveIndex(index)}
                     className={`relative h-20 w-24 shrink-0 overflow-hidden rounded-2xl border transition ${

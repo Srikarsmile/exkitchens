@@ -14,15 +14,11 @@ const sections = [
   },
   {
     title: "Using the marketplace",
-    body: "You may contact us about a listing without creating an account. You must create an account with accurate contact details before placing bids or starting secure buy-now checkout. Admin approval may be required before bidding is enabled.",
+    body: "You may contact us about a listing without creating an account. You must create an account with accurate contact details before starting secure buy-now checkout.",
   },
   {
     title: "Listing information",
     body: "Sizes, appliances, finishes, condition notes, and photographs are provided in good faith. Availability can change quickly, and buyers should confirm installation, transport, and fit before payment is finalised.",
-  },
-  {
-    title: "Auction bids",
-    body: "A bid is a binding offer to purchase at the amount shown. Auctions can extend automatically near the closing time. Admins may cancel or close an auction where fraud, data error, duplicate stock, or operational risk makes that necessary.",
   },
   {
     title: "Buy-now checkout",
@@ -34,7 +30,7 @@ const sections = [
   },
   {
     title: "Account conduct",
-    body: "We may suspend bidding, remove listings, or close accounts that submit false information, attempt self-bidding, abuse staff, or interfere with the integrity of the marketplace.",
+    body: "We may remove listings, cancel orders, or close accounts that submit false information, abuse staff, or interfere with the integrity of the marketplace.",
   },
   {
     title: "Liability and governing law",
@@ -54,11 +50,11 @@ export default function TermsPage() {
           Terms & Conditions
         </p>
         <h1 className="mt-3 text-4xl font-light tracking-tight text-gray-900">
-          Terms for bidding and checkout
+          Terms for listings and checkout
         </h1>
         <p className="mt-4 max-w-3xl text-base leading-7 text-gray-500">
           These terms describe how Ex Kitchens handles account access, listings,
-          bids, checkout, settlement, and related buyer obligations.
+          checkout, settlement, and related buyer obligations.
         </p>
 
         <div className="mt-10 space-y-8">

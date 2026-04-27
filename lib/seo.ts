@@ -39,7 +39,7 @@ export function buildHomePageStructuredData(siteUrl: string, supportPhone: strin
       name: "ExKitchens",
       url: siteUrl,
       description:
-        "Browse premium ex-display and pre-loved kitchens, live auctions, and buy-now listings.",
+        "Browse premium ex-display and pre-loved kitchens with clear buy-now pricing.",
     },
   ];
 }

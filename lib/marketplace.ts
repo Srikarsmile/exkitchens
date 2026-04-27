@@ -243,6 +243,7 @@ export async function getFeaturedListings(limit = 6) {
       "id, slug, title, brand, summary, sale_type, status, hero_image_url, tags, original_price_pence, buy_now_price_pence, starting_bid_pence, bid_increment_pence, reserve_price_pence, current_price_pence, featured, seller_profile_id, winner_profile_id, settlement_order_id, auctions(id, status, start_at, end_at, current_bid_pence, bid_count)",
     )
     .eq("status", "published")
+    .eq("sale_type", "buy_now")
     .order("featured", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -268,6 +269,7 @@ export async function getMarketplaceListings() {
       "id, slug, title, brand, summary, sale_type, status, hero_image_url, tags, original_price_pence, buy_now_price_pence, starting_bid_pence, bid_increment_pence, reserve_price_pence, current_price_pence, featured, seller_profile_id, winner_profile_id, settlement_order_id, auctions(id, status, start_at, end_at, current_bid_pence, bid_count)",
     )
     .eq("status", "published")
+    .eq("sale_type", "buy_now")
     .order("featured", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -290,6 +292,7 @@ export async function getPublishedListingSeoBySlug(slug: string) {
     .select("slug, title, brand, summary, description, hero_image_url, tags, location")
     .eq("slug", slug)
     .eq("status", "published")
+    .eq("sale_type", "buy_now")
     .maybeSingle();
 
   if (error || !data) {
@@ -324,6 +327,7 @@ export async function getPublishedListingSitemapEntries() {
     .from("listings")
     .select("slug, updated_at")
     .eq("status", "published")
+    .eq("sale_type", "buy_now")
     .order("updated_at", { ascending: false });
 
   if (error || !data) {
@@ -358,6 +362,7 @@ export async function getListingBySlug(slug: string, viewerId?: string | null) {
       "id, slug, title, brand, summary, description, location, sale_type, status, hero_image_url, gallery_urls, tags, original_price_pence, buy_now_price_pence, starting_bid_pence, bid_increment_pence, reserve_price_pence, current_price_pence, featured, seller_profile_id, winner_profile_id, settlement_order_id, auctions(id, status, start_at, end_at, current_bid_pence, bid_count)",
     )
     .eq("slug", slug)
+    .eq("sale_type", "buy_now")
     .maybeSingle();
 
   if (error || !data) {

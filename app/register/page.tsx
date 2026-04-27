@@ -33,8 +33,8 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   return (
     <AuthPageShell
       eyebrow="Buyer Registration"
-      title="Create your Ex Kitchens account before the next auction opens."
-      description="Every bidder starts in review. Confirm your email, add the right contact details, and keep the account ready for approval."
+      title="Create your Ex Kitchens buyer account."
+      description="Confirm your email, add the right contact details, and keep saved listings and order updates in one place."
       primaryCta={
         <Link
           href="/marketplace"
@@ -58,11 +58,11 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
           </p>
         ) : undefined
       }
-      asideTitle="A proper bidder account starts with a verified inbox."
+      asideTitle="A proper buyer account starts with a verified inbox."
       asideBody="New registrations now support branded verification and welcome emails, so the account flow feels like Ex Kitchens from the first click."
       asidePoints={[
         "Email verification happens before the account is considered ready.",
-        "Bidder approval still stays under admin control after signup.",
+        "Saved listings and order updates stay tied to the verified account.",
         "Basic spam traps stop low-quality automated registrations before they land.",
       ]}
       form={<RegisterForm nextPath={nextPath} />}

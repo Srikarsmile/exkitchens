@@ -58,7 +58,7 @@ export default async function ForgotPasswordPage({
       asideBody="Password resets now stay inside the same Ex Kitchens shell, with the same branding and same account context."
       asidePoints={[
         "Recovery links take you back into this site, not a separate auth screen.",
-        "Your bids, watchlists, and orders stay untouched when the password changes.",
+        "Your watchlists and orders stay untouched when the password changes.",
         "Account protection still depends on verified email ownership.",
       ]}
       form={<ForgotPasswordForm />}

@@ -37,7 +37,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <AuthPageShell
       eyebrow="Buyer Login"
       title="Sign in without leaving the marketplace behind."
-      description="Watch listings, follow pricing, and keep every bid, order, and approval update inside your Ex Kitchens account."
+      description="Watch listings, follow pricing, and keep every order update inside your Ex Kitchens account."
       primaryCta={
         <Link
           href="/marketplace"
@@ -65,7 +65,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           {checkEmail ? (
             <p className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
               Check your inbox for the Ex Kitchens verification email, then sign
-              in. Bidding stays locked until the profile is approved.
+              in to keep your saved listings and orders together.
             </p>
           ) : null}
 
@@ -84,11 +84,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           ) : null}
         </>
       }
-      asideTitle="A cleaner route back into bids, watchlists, and orders."
+      asideTitle="A cleaner route back into watchlists and orders."
       asideBody="Your account stays part of the same Ex Kitchens experience, not a detached admin screen."
       asidePoints={[
         "Track watchlists, orders, and account updates in one place.",
-        "Email verification and review keep bidder accounts cleaner.",
+        "Email verification keeps buyer accounts cleaner.",
         "Password recovery links bring you straight back into the marketplace flow.",
       ]}
       form={<LoginForm nextPath={nextPath} />}

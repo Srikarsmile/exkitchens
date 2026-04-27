@@ -8,9 +8,9 @@ const steps = [
   {
     icon: Tag,
     num: "01",
-    title: "Browse & Bid",
+    title: "Browse & Buy",
     description:
-      "Explore curated ex-display and pre-loved kitchens. Buy at a fixed price or bid in our weekly live auctions.",
+      "Explore curated ex-display and pre-loved kitchens with clear fixed prices and original-price savings shown upfront.",
   },
   {
     icon: Hammer,

@@ -11,11 +11,9 @@ import {
 import { requireUser } from "@/lib/auth";
 import { getAccountDashboard } from "@/lib/account";
 import {
-  formatBidderStatus,
   formatDateTime,
   formatMoney,
   formatOrderStatus,
-  formatTimeRemaining,
 } from "@/lib/marketplace-shared";
 
 interface AccountPageProps {
@@ -48,7 +46,6 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           { table: "orders", filter: `seller_profile_id=eq.${user.id}` },
           { table: "watchlist_entries", filter: `profile_id=eq.${user.id}` },
           { table: "listings", filter: `seller_profile_id=eq.${user.id}` },
-          { table: "bids", filter: `bidder_id=eq.${user.id}` },
         ]}
       />
 
@@ -65,9 +62,6 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-600">
               <span className="rounded-full bg-[#f4f7f4] px-3 py-1 text-[#3d7a44]">
                 {profile?.role || "buyer"}
-              </span>
-              <span className="rounded-full bg-[#fafafa] px-3 py-1">
-                {formatBidderStatus(profile?.bidder_status || "pending")}
               </span>
               <span className="rounded-full bg-[#fafafa] px-3 py-1">
                 {profile?.phone || "No phone on file"}
@@ -119,16 +113,13 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
 
       <section className="mt-8 grid gap-4 md:grid-cols-3">
         <div className="rounded-[2rem] bg-white p-6 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
-          <p className="text-sm text-gray-500">Bidder approval</p>
+          <p className="text-sm text-gray-500">Buyer account</p>
           <p className="mt-3 text-2xl font-medium text-gray-900">
-            {formatBidderStatus(profile?.bidder_status || "pending")}
+            Ready
           </p>
           <p className="mt-2 text-sm leading-6 text-gray-500">
-            {profile?.bidder_status === "approved"
-              ? "You can join live auctions and complete buy-now checkout."
-              : profile?.bidder_status === "rejected"
-                ? "An admin needs to review your account before bidding is re-enabled."
-                : "Buy-now checkout is available once you sign in. Auction bidding goes live after admin approval."}
+            Use this account to watch listings, reserve buy-now kitchens, and
+            keep order updates in one place.
           </p>
         </div>
         <div className="rounded-[2rem] bg-white p-6 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
@@ -146,8 +137,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             {activeOrderCount}
           </p>
           <p className="mt-2 text-sm leading-6 text-gray-500">
-            Active auction wins and buy-now reservations stay visible until they are
-            fulfilled.
+            Active reservations stay visible until they are fulfilled.
           </p>
         </div>
       </section>
@@ -220,7 +210,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         </div>
       </section>
 
-      <section className="mt-10 grid gap-6 lg:grid-cols-2">
+      <section className="mt-10">
         <div className="rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
           <h2 className="text-2xl font-medium text-gray-900">Orders</h2>
           <div className="mt-6 space-y-4">
@@ -235,7 +225,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                         {order.listingTitle || "Untitled listing"}
                       </p>
                       <p className="mt-1 text-sm text-gray-500">
-                        {order.kind === "auction_win" ? "Auction win" : "Buy now"}
+                        {order.kind === "buy_now" ? "Buy now" : "Reserved order"}
                       </p>
                     </div>
                     <div className="text-right">
@@ -275,52 +265,6 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             )}
           </div>
         </div>
-
-        <div className="rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
-          <h2 className="text-2xl font-medium text-gray-900">My bids</h2>
-          <div className="mt-6 space-y-4">
-            {dashboard.bids.length === 0 ? (
-              <p className="text-sm text-gray-500">No bids yet.</p>
-            ) : (
-              dashboard.bids.map((bid) => (
-                <div key={bid.id} className="rounded-2xl bg-[#fafafa] p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      {bid.listingSlug ? (
-                        <Link
-                          href={`/marketplace/${bid.listingSlug}`}
-                          className="font-medium text-gray-900 hover:text-[#3d7a44]"
-                        >
-                          {bid.listingTitle || "Untitled listing"}
-                        </Link>
-                      ) : (
-                        <p className="font-medium text-gray-900">
-                          {bid.listingTitle || "Untitled listing"}
-                        </p>
-                      )}
-                      <p className="mt-1 text-xs text-gray-500">
-                        {formatDateTime(bid.createdAt)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">
-                        {formatMoney(bid.amountPence)}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        {bid.isWinningBid ? "Current leader" : "Outbid"}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm text-gray-600">
-                    {bid.auctionStatus
-                      ? `${bid.auctionStatus[0].toUpperCase()}${bid.auctionStatus.slice(1)}${bid.auctionEndsAt ? ` • ${formatTimeRemaining(bid.auctionEndsAt)}` : ""}`
-                      : "No auction status"}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
       </section>
 
       <section className="mt-10 rounded-[2rem] bg-white p-8 shadow-[0_20px_40px_rgba(17,17,17,0.05)]">
@@ -347,13 +291,6 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                     {formatMoney(listing.currentPricePence)}
                   </p>
                 </div>
-                {listing.auction ? (
-                  <p className="mt-3 text-sm text-gray-600">
-                    {listing.auction.status[0].toUpperCase() +
-                      listing.auction.status.slice(1)}{" "}
-                    • {formatTimeRemaining(listing.auction.endAt)}
-                  </p>
-                ) : null}
                 <form action={toggleWatchlistAction} className="mt-4">
                   <input type="hidden" name="listingId" value={listing.id} />
                   <input type="hidden" name="listingSlug" value={listing.slug} />
@@ -394,7 +331,6 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                     </div>
                     <p className="mt-2 text-sm text-gray-600 capitalize">
                       {listing.status}
-                      {listing.auction ? ` • ${listing.auction.status}` : ""}
                     </p>
                   </div>
                 ))

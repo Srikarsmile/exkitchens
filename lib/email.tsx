@@ -268,7 +268,7 @@ export async function sendAccountVerificationEmail({
       preview: "Confirm your Ex Kitchens account",
       heading: "Confirm your email address",
       recipientName,
-      body: "Finish your Ex Kitchens account setup so you can watch listings, join approval review, and bid when your profile is cleared.",
+      body: "Finish your Ex Kitchens account setup so you can watch listings and keep order updates in one place.",
       secondaryBody:
         "This link is for your account only. If you did not create an account, you can ignore this email.",
       actionLabel: "Verify email",
@@ -297,7 +297,7 @@ export async function sendWelcomeEmail({
       recipientName,
       body: "Welcome in. Your email has been confirmed and your marketplace account is active.",
       secondaryBody:
-        "Add any missing contact details, keep an eye on your watchlist, and wait for bidder approval before placing live bids.",
+        "Add any missing contact details, keep an eye on your watchlist, and reserve buy-now kitchens from the marketplace.",
       actionLabel: "Open your account",
       actionUrl: `${getSiteUrl()}/account`,
     }),

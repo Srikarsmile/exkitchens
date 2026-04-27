@@ -92,8 +92,8 @@ export default async function AdminNewListingPage() {
               body: "Use the summary for card text and the description for appliances, units, finishes, dimensions, and extras.",
             },
             {
-              title: "3. Pick the sale route",
-              body: "Choose auction or buy now, fill the pricing, and add an auction window only when the listing should take bids.",
+              title: "3. Set the selling price",
+              body: "Add the original showroom price and the buy-now price so buyers can see the saving before they enquire or reserve.",
             },
           ].map((item) => (
             <div
