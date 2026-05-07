@@ -190,8 +190,8 @@ export default async function MarketplacePage() {
                     </div>
                   ) : null}
 
-                  <div className="flex items-end justify-between gap-4 border-t border-gray-100 pt-4">
-                    <div>
+                  <div className="flex flex-col items-start gap-4 border-t border-gray-100 pt-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="min-w-0">
                       <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
                         Buy now price
                       </p>
@@ -212,7 +212,7 @@ export default async function MarketplacePage() {
 
                     <Link
                       href={`/marketplace/${listing.slug}`}
-                      className="rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
+                      className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#1a1a1a] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2b2b2b]"
                     >
                       View listing
                     </Link>
