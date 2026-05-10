@@ -102,6 +102,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       ? "error"
       : "success";
   const stripeMode = getStripeMode();
+  const stripeWebhookLooksValid = hasValidStripeWebhookSecret();
   const supportPhone = getMarketplaceSupportPhone();
   const contactEmail = getMarketplaceContactEmail();
   const operationalChecks = [
@@ -122,12 +123,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               ? "Configured"
               : "Missing",
       tone:
-        stripeMode === "missing"
+        stripeMode === "missing" || !stripeWebhookLooksValid
           ? "bad"
           : stripeMode === "test"
             ? "warn"
             : "good",
-      detail: hasValidStripeWebhookSecret()
+      detail: stripeWebhookLooksValid
         ? "Webhook signing secret looks valid."
         : "Webhook signing secret is missing or invalid.",
     },

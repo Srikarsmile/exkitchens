@@ -64,7 +64,7 @@ export function getSupabaseAdminEnv() {
 }
 
 export function isStripeConfigured() {
-  return Boolean(stripeSecretKey && stripeWebhookSecret);
+  return Boolean(stripeSecretKey && hasValidStripeWebhookSecret());
 }
 
 export function getStripeMode() {
@@ -91,6 +91,12 @@ export function getStripeEnv() {
   if (!stripeSecretKey || !stripeWebhookSecret) {
     throw new Error(
       "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET.",
+    );
+  }
+
+  if (!hasValidStripeWebhookSecret()) {
+    throw new Error(
+      "Stripe webhook secret is invalid. Set STRIPE_WEBHOOK_SECRET to a whsec_ signing secret.",
     );
   }
 
