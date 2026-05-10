@@ -991,7 +991,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         <select
                           name="condition"
                           defaultValue={
-                            listingConditionLabel === "Used"
+                            listingConditionLabel === "Used kitchen"
                               ? "used"
                               : listingConditionLabel === "Ex-display"
                                 ? "ex_display"
@@ -1001,7 +1001,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         >
                           <option value="unspecified">Condition not set</option>
                           <option value="ex_display">Ex-display</option>
-                          <option value="used">Used</option>
+                          <option value="used">Used kitchen</option>
                         </select>
                         <button
                           type="submit"

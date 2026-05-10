@@ -100,7 +100,7 @@ test("buildHomePageStructuredData avoids hard-coded review claims", () => {
 test("getListingConditionLabel recognises used kitchens", () => {
   assert.equal(
     getListingConditionLabel("Used kitchen", "Pre-loved shaker kitchen"),
-    "Used",
+    "Used kitchen",
   );
 });
 

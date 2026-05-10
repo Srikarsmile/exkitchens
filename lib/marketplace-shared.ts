@@ -321,7 +321,7 @@ export function getListingConditionLabel(
   const condition = getListingCondition(...inputs);
 
   if (condition === "used") {
-    return "Used";
+    return "Used kitchen";
   }
 
   if (condition === "ex_display") {

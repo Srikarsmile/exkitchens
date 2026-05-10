@@ -594,7 +594,7 @@ export default function AdminCreateListingForm({
                 Select condition
               </option>
               <option value="ex_display">Ex-display</option>
-              <option value="used">Used</option>
+              <option value="used">Used kitchen</option>
             </select>
           </Field>
 
