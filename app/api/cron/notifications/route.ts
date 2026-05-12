@@ -1,19 +1,9 @@
 import { NextResponse } from "next/server";
 import { deliverPendingNotificationEmails } from "@/lib/email";
-import { getMarketplaceCronSecret } from "@/lib/env";
-
-function isAuthorized(request: Request) {
-  const secret = getMarketplaceCronSecret();
-
-  if (!secret) {
-    return false;
-  }
-
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
+import { isAuthorizedCronRequest } from "@/lib/cron";
 
 async function handleNotificationDrain(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

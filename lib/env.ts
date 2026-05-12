@@ -136,8 +136,18 @@ export function getMarketplaceContactEmailHref() {
   return email ? `mailto:${email}` : "";
 }
 
+export function getMarketplaceCronSecrets() {
+  return Array.from(
+    new Set(
+      [process.env.MARKETPLACE_CRON_SECRET, process.env.CRON_SECRET]
+        .map((secret) => secret?.trim())
+        .filter((secret): secret is string => Boolean(secret)),
+    ),
+  );
+}
+
 export function getMarketplaceCronSecret() {
-  return process.env.MARKETPLACE_CRON_SECRET || process.env.CRON_SECRET || "";
+  return getMarketplaceCronSecrets()[0] || "";
 }
 
 export function getMarketplaceSupportPhone() {
